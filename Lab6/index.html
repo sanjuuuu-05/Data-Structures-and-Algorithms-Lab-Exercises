@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tree Visualizer · BST AVL Red-Black</title>
+<meta name="description" content="Step-by-step animated BST, AVL and Red-Black tree visualizer with synchronized Python code highlighting.">
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c232d; --border:#2a3340; --text:#e6edf3; --muted:#8b97a6;
+  --accent:#58a6ff; --cur:#f5b83d; --new:#a78bfa; --found:#3fb950; --bad:#f85149; --rot:#39c5cf; --del:#f778ba; --ok:#3fb950; --info:#8b97a6;
+  --node-fill:#1f2a37; --node-stroke:#5b6b7f; --edge:#4a5666; --red:#c9364e; --black:#0a0d12;
+  --code-kw:#ff7b72; --code-str:#a5d6ff; --code-cm:#6e7b8b; --code-num:#79c0ff; --code-fn:#d2a8ff; --code-self:#ffa657;
+  --dur:450ms;
+}
+:root[data-theme="light"]{
+  --bg:#f6f8fa; --panel:#ffffff; --panel2:#f0f3f6; --border:#d0d7de; --text:#1f2328; --muted:#656d76;
+  --accent:#0969da; --cur:#d99100; --new:#7c3aed; --found:#1a7f37; --bad:#cf222e; --rot:#0e8a96; --del:#bf3989; --ok:#1a7f37; --info:#656d76;
+  --node-fill:#eef2f6; --node-stroke:#8c98a6; --edge:#9aa5b1; --red:#d6455d; --black:#1f2328;
+  --code-kw:#cf222e; --code-str:#0a3069; --code-cm:#6e7781; --code-num:#0550ae; --code-fn:#8250df; --code-self:#953800;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#f0f3f6; --border:#d0d7de; --text:#1f2328; --muted:#656d76;
+    --accent:#0969da; --cur:#d99100; --new:#7c3aed; --found:#1a7f37; --bad:#cf222e; --rot:#0e8a96; --del:#bf3989; --ok:#1a7f37; --info:#656d76;
+    --node-fill:#eef2f6; --node-stroke:#8c98a6; --edge:#9aa5b1; --red:#d6455d; --black:#1f2328;
+    --code-kw:#cf222e; --code-str:#0a3069; --code-cm:#6e7781; --code-num:#0550ae; --code-fn:#8250df; --code-self:#953800;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--panel)}
+h1{font-size:16px;margin:0;font-weight:650;letter-spacing:.2px}
+h1 small{color:var(--muted);font-weight:400;margin-left:8px}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:7px;cursor:pointer;color:var(--muted);transition:background .2s,color .2s}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--accent);color:#fff}
+.sp{flex:1}
+.icon-btn{border:1px solid var(--border);background:var(--panel2);border-radius:8px;width:34px;height:34px;cursor:pointer;display:inline-grid;place-items:center}
+.icon-btn:hover{border-color:var(--accent)}
+main{flex:1;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(340px,1fr);gap:14px;padding:14px;min-height:0}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.stage{position:relative;flex:1;min-height:380px;background:
+   radial-gradient(circle at 1px 1px,color-mix(in srgb,var(--muted) 22%,transparent) 1px,transparent 0) 0 0/22px 22px}
+svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stats{position:absolute;top:10px;left:10px;display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
+.stat{background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:9px;padding:4px 10px;font-size:12px;color:var(--muted)}
+.stat b{color:var(--text);font-variant-numeric:tabular-nums;margin-left:4px;font-size:13px}
+.stat.bad b{color:var(--bad)} .stat.good b{color:var(--ok)}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted);background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--border);border-radius:9px;padding:5px 10px;max-width:calc(100% - 20px)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);pointer-events:none;transition:opacity .4s}
+#msgbar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--border);background:var(--panel2);min-height:50px}
+.chip{flex:none;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:3px 9px;border-radius:99px;color:#0d1117;background:var(--info);transition:background var(--dur)}
+#msgtext{flex:1;min-width:0}
+#stepno{flex:none;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 14px;border-top:1px solid var(--border)}
+.transport{display:flex;gap:6px}
+.transport button{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);cursor:pointer;display:grid;place-items:center;transition:transform .15s,border-color .2s,background .2s}
+.transport button:hover{border-color:var(--accent)}
+.transport button:active{transform:scale(.94)}
+.transport button.primary{background:var(--accent);border-color:var(--accent);color:#fff;width:48px}
+svg.ic{position:static;width:18px;height:18px;fill:currentColor}
+.slider{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+.slider output{min-width:38px;color:var(--text);font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--accent);height:4px;cursor:pointer}
+#scrub{flex:1;min-width:140px}
+.ops{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;border-top:1px solid var(--border);background:var(--panel2)}
+.ops input[type=text],.ops input[type=number]{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:7px 10px;outline:none;width:92px}
+.ops input#bulk{width:170px}
+.ops input:focus{border-color:var(--accent)}
+.btn{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:7px 12px;cursor:pointer;transition:border-color .2s,background .2s,transform .1s}
+.btn:hover{border-color:var(--accent)} .btn:active{transform:scale(.97)}
+.btn.ins{background:color-mix(in srgb,var(--new) 20%,var(--panel));border-color:color-mix(in srgb,var(--new) 55%,var(--border))}
+.btn.sea{background:color-mix(in srgb,var(--found) 18%,var(--panel));border-color:color-mix(in srgb,var(--found) 55%,var(--border))}
+.btn.del{background:color-mix(in srgb,var(--del) 18%,var(--panel));border-color:color-mix(in srgb,var(--del) 55%,var(--border))}
+.divider{width:1px;height:24px;background:var(--border);margin:0 4px}
+/* right column */
+.side{display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel2)}
+.tabs button{flex:1;border:0;background:transparent;padding:10px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+.pane{flex:1;overflow:auto;min-height:320px;max-height:calc(100vh - 150px);position:relative}
+#code{font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:8px 0}
+.ln{display:flex;padding:0 14px 0 0;border-left:3px solid transparent;transition:background var(--dur),border-color var(--dur)}
+.ln .no{flex:none;width:38px;text-align:right;padding-right:12px;color:var(--code-cm);user-select:none}
+.ln .tx{white-space:pre;flex:1}
+.ln.active{background:color-mix(in srgb,var(--lc,var(--cur)) 20%,transparent);border-left-color:var(--lc,var(--cur))}
+.k-cmp{--lc:var(--cur)} .k-new{--lc:var(--new)} .k-found{--lc:var(--found)} .k-ok{--lc:var(--ok)} .k-bad{--lc:var(--bad)}
+.k-rot{--lc:var(--rot)} .k-del{--lc:var(--del)} .k-fix{--lc:var(--cur)} .k-info{--lc:var(--info)}
+.tk-kw{color:var(--code-kw)} .tk-str{color:var(--code-str)} .tk-cm{color:var(--code-cm);font-style:italic}
+.tk-num{color:var(--code-num)} .tk-fn{color:var(--code-fn)} .tk-self{color:var(--code-self)}
+#log{padding:6px}
+.li{display:flex;gap:8px;align-items:flex-start;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;border:1px solid transparent}
+.li:hover{background:var(--panel2)}
+.li.cur{background:var(--panel2);border-color:var(--border)}
+.li i{flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--c,var(--info))}
+.li span.n{flex:none;color:var(--muted);width:30px;text-align:right;font-variant-numeric:tabular-nums}
+.lh{padding:10px 8px 4px;font-weight:650;color:var(--accent);font-size:12.5px}
+.hidden{display:none!important}
+/* SVG */
+.edge{stroke:var(--edge);stroke-width:2.2;stroke-linecap:round;transition:stroke var(--dur),stroke-width var(--dur)}
+.edge.hot{stroke:var(--accent);stroke-width:3}
+.node .c{fill:var(--node-fill);stroke:var(--node-stroke);stroke-width:2.5;transition:fill var(--dur) ease,stroke var(--dur) ease,stroke-width var(--dur) ease,filter var(--dur) ease}
+.node text{font:600 15px ui-monospace,Menlo,Consolas,monospace;fill:var(--text);text-anchor:middle;dominant-baseline:central;pointer-events:none;transition:fill var(--dur)}
+.node text.sub{font:500 11px ui-monospace,Menlo,Consolas,monospace;fill:var(--muted)}
+.node text.sub.bad{fill:var(--bad);font-weight:700}
+.node.rb-r .c{fill:var(--red);stroke:color-mix(in srgb,var(--red) 70%,#000)}
+.node.rb-b .c{fill:var(--black);stroke:#4a5666}
+.node.rb-r text,.node.rb-b text{fill:#fff}
+.node.cur .c{stroke:var(--cur);stroke-width:5;filter:drop-shadow(0 0 7px var(--cur))}
+.node.new .c{stroke:var(--new);stroke-width:5;filter:drop-shadow(0 0 7px var(--new))}
+.node.found .c{stroke:var(--found);stroke-width:5;filter:drop-shadow(0 0 8px var(--found))}
+.node.bad .c{stroke:var(--bad);stroke-width:5;filter:drop-shadow(0 0 8px var(--bad))}
+.node.rot .c{stroke:var(--rot);stroke-width:5;filter:drop-shadow(0 0 7px var(--rot))}
+.node.del .c{stroke:var(--del);stroke-width:5;filter:drop-shadow(0 0 8px var(--del))}
+@media (prefers-reduced-motion: reduce){ :root{--dur:1ms} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Tree Visualizer<small>watch the code run</small></h1>
+  <div class="seg" id="treeSeg" role="tablist" aria-label="Tree type">
+    <button data-t="bst" class="on">Plain BST</button>
+    <button data-t="avl">AVL</button>
+    <button data-t="rb">Red-Black</button>
+  </div>
+  <div class="sp"></div>
+  <button class="icon-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.05-1-.14-1.5A6 6 0 0 1 12 3z"/></svg>
+  </button>
+</header>
+
+<main>
+  <section class="card">
+    <div class="stage" id="stage">
+      <svg id="svg" aria-label="Tree animation"><g id="world"><g id="edges"></g><g id="nodes"></g></g></svg>
+      <div class="stats" id="stats"></div>
+      <div class="empty" id="empty">Tree is empty. Insert a key below to begin.</div>
+      <div class="legend">
+        <span><i style="background:var(--cur)"></i>comparing</span>
+        <span><i style="background:var(--new)"></i>new node</span>
+        <span><i style="background:var(--found)"></i>found</span>
+        <span><i style="background:var(--bad)"></i>problem</span>
+        <span><i style="background:var(--rot)"></i>rotating</span>
+        <span><i style="background:var(--del)"></i>deleting</span>
+      </div>
+    </div>
+    <div id="msgbar"><span class="chip" id="chip">info</span><span id="msgtext"></span><span id="stepno"></span></div>
+    <div class="controls">
+      <div class="transport">
+        <button id="bFirst" title="Restart (Home)" aria-label="Restart"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+        <button id="bPrev" title="Step back (←)" aria-label="Step back"><svg class="ic" viewBox="0 0 24 24"><path d="M17 5v14L6 12z"/></svg></button>
+        <button id="bPlay" class="primary" title="Play / pause (Space)" aria-label="Play or pause"></button>
+        <button id="bNext" title="Step forward (→)" aria-label="Step forward"><svg class="ic" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg></button>
+        <button id="bLast" title="Skip to end (End)" aria-label="Skip to end"><svg class="ic" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      </div>
+      <label class="slider">Speed <input type="range" id="speed" min="0" max="100" value="40" style="width:140px"><output id="speedOut">1.0×</output></label>
+      <label class="slider" style="flex:1;min-width:160px">Step <input type="range" id="scrub" min="0" max="0" value="0"></label>
+    </div>
+    <div class="ops">
+      <input type="number" id="key" placeholder="key" value="25" aria-label="Key">
+      <button class="btn ins" id="bIns">Insert</button>
+      <button class="btn sea" id="bSea">Search</button>
+      <button class="btn del" id="bDel">Delete</button>
+      <span class="divider"></span>
+      <input type="text" id="bulk" placeholder="10, 20, 30" aria-label="Bulk insert keys">
+      <button class="btn" id="bBulk">Insert all</button>
+      <span class="divider"></span>
+      <button class="btn" id="pLab" title="Lab sample input">Lab sample</button>
+      <button class="btn" id="pSeq" title="1..15 in order: BST worst case">Sequential 1–15</button>
+      <button class="btn" id="pRnd">Random 15</button>
+      <button class="btn" id="pClr">Clear</button>
+    </div>
+  </section>
+
+  <section class="card side">
+    <div class="tabs"><button class="on" data-p="code">Python code</button><button data-p="log">Step log</button></div>
+    <div class="pane" id="codePane"><div id="code"></div></div>
+    <div class="pane hidden" id="logPane"><div id="log"></div></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. PYTHON LISTINGS  (a  #@label  marker ties a line to a trace step)
+   ===================================================================== */
+const LISTINGS = {
+bst: `class Node:
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.left = None
+        self.right = None
+
+class BST:
+    # ---------- insert (iterative: no recursion limit) ----------
+    def insert(self, key, value):
+        new = Node(key, value)
+        if self.root is None:               #@rootcheck
+            self.root = new                 #@setroot
+            return
+        cur = self.root                     #@start
+        while True:
+            if key == cur.key:              #@dup
+                cur.value = value
+                return
+            elif key < cur.key:             #@goleft
+                if cur.left is None:        #@leftempty
+                    cur.left = new          #@attachL
+                    return
+                cur = cur.left              #@moveL
+            else:                           #@goright
+                if cur.right is None:       #@rightempty
+                    cur.right = new         #@attachR
+                    return
+                cur = cur.right             #@moveR
+
+    # ---------- search ----------
+    def search(self, key):
+        cur = self.root                     #@s_start
+        while cur is not None:              #@s_while
+            self.comparisons += 1           #@s_cnt
+            if key == cur.key:
+                return cur.value            #@s_found
+            cur = cur.left if key < cur.key else cur.right   #@s_move
+        return None                         #@s_miss
+
+    # ---------- delete (leaf / one child / two children) ----------
+    def delete(self, key):
+        parent, cur = None, self.root
+        while cur is not None and cur.key != key:   #@d_find
+            parent = cur
+            cur = cur.left if key < cur.key else cur.right
+        if cur is None:                     #@d_none
+            return False
+        if cur.left and cur.right:          #@d_two
+            parent, succ = cur, cur.right
+            while succ.left:                #@d_succ
+                parent, succ = succ, succ.left
+            cur.key = succ.key              #@d_copy
+            cur = succ
+        child = cur.left or cur.right       #@d_child
+        if parent is None:                  #@d_root
+            self.root = child
+        elif parent.left is cur:            #@d_unlinkL
+            parent.left = child
+        else:                               #@d_unlinkR
+            parent.right = child
+        return True`,
+
+avl: `def h(node):
+    return node.height if node else 0
+
+def update(node):
+    node.height = 1 + max(h(node.left), h(node.right))
+
+def balance_factor(node):
+    return h(node.left) - h(node.right)
+
+class AVLTree:
+    # ---------- insert (recursive) ----------
+    def insert(self, key):
+        self.root = self._insert(self.root, key)      #@i_entry
+
+    def _insert(self, node, key):
+        if node is None:                              #@i_none
+            return AVLNode(key)                       #@i_create
+        if key < node.key:                            #@i_lt
+            node.left = self._insert(node.left, key)
+        elif key > node.key:                          #@i_gt
+            node.right = self._insert(node.right, key)
+        else:
+            return node                               #@i_dup
+        return self.rebalance(node)                   #@i_rebal
+
+    # ---------- rebalance: handles all 4 cases ----------
+    def rebalance(self, node):
+        update(node)                                  #@r_update
+        bf = balance_factor(node)                     #@r_bf
+        if bf > 1:                                    #@r_leftheavy
+            if balance_factor(node.left) < 0:         #@r_lr
+                node.left = self.rotate_left(node.left)   # Left-Right
+            return self.rotate_right(node)            # Left-Left
+        if bf < -1:                                   #@r_rightheavy
+            if balance_factor(node.right) > 0:        #@r_rl
+                node.right = self.rotate_right(node.right)  # Right-Left
+            return self.rotate_left(node)             # Right-Right
+        return node                                   #@r_ok
+
+    def rotate_right(self, y):
+        x = y.left                                    #@rr1
+        y.left = x.right
+        x.right = y                                   #@rr3
+        update(y); update(x)
+        return x
+
+    def rotate_left(self, x):
+        y = x.right                                   #@rl1
+        x.right = y.left
+        y.left = x                                    #@rl3
+        update(x); update(y)
+        return y
+
+    # ---------- search ----------
+    def search(self, key):
+        cur = self.root                               #@s_start
+        while cur is not None:                        #@s_while
+            self.comparisons += 1                     #@s_cnt
+            if key == cur.key:
+                return cur.value                      #@s_found
+            cur = cur.left if key < cur.key else cur.right   #@s_move
+        return None                                   #@s_miss
+
+    # ---------- delete (recursive, then rebalance) ----------
+    def delete(self, key):
+        self.root = self._delete(self.root, key)      #@d_entry
+
+    def _delete(self, node, key):
+        if node is None:                              #@d_none
+            return None
+        if key < node.key:                            #@d_lt
+            node.left = self._delete(node.left, key)
+        elif key > node.key:                          #@d_gt
+            node.right = self._delete(node.right, key)
+        else:
+            if node.left is None:                     #@d_noleft
+                return node.right
+            if node.right is None:                    #@d_noright
+                return node.left
+            succ = node.right                         #@d_succ0
+            while succ.left:                          #@d_succloop
+                succ = succ.left
+            node.key = succ.key                       #@d_copy
+            node.right = self._delete(node.right, succ.key)   #@d_recur
+        return self.rebalance(node)                   #@d_rebal`,
+
+rb: `# Rules: root BLACK; no RED node has a RED child;
+#        every path to NIL has the same number of BLACK nodes
+class RedBlackTree:
+    # ---------- insert ----------
+    def insert(self, key):
+        parent, cur = None, self.root
+        while cur is not self.NIL:                    #@i_while
+            parent = cur
+            if key == cur.key:                        #@i_dup
+                return
+            cur = cur.left if key < cur.key else cur.right   #@i_move
+        node = RBNode(key, RED)                       # new nodes start RED
+        node.parent = parent
+        if parent is None: self.root = node           #@i_attach
+        elif key < parent.key: parent.left = node
+        else: parent.right = node
+        self._fix_insert(node)                        #@i_fix
+
+    def _fix_insert(self, z):
+        while z.parent and z.parent.color == RED:     #@f_while
+            gp = z.parent.parent
+            if z.parent is gp.left:                   #@f_side
+                uncle = gp.right                      #@f_uncle
+                if uncle.color == RED:                #@f_case1
+                    z.parent.color = BLACK            #@f_c1a
+                    uncle.color = BLACK
+                    gp.color = RED
+                    z = gp                            #@f_c1b
+                else:
+                    if z is z.parent.right:           #@f_case2
+                        z = z.parent
+                        self.rotate_left(z)           #@f_c2rot
+                    z.parent.color = BLACK            #@f_case3
+                    gp.color = RED
+                    self.rotate_right(gp)             #@f_c3rot
+            else:
+                ...  # mirror image: swap left <-> right
+        self.root.color = BLACK                       #@f_root
+
+    def rotate_left(self, x):
+        y = x.right                                   #@rl1
+        x.right = y.left
+        if y.left is not self.NIL: y.left.parent = x
+        y.parent = x.parent
+        if x.parent is None: self.root = y
+        elif x is x.parent.left: x.parent.left = y
+        else: x.parent.right = y
+        y.left = x                                    #@rl5
+        x.parent = y
+        # rotate_right is the mirror image
+
+    # ---------- search ----------
+    def search(self, key):
+        cur = self.root                               #@s_start
+        while cur is not self.NIL:                    #@s_while
+            self.comparisons += 1                     #@s_cnt
+            if key == cur.key:
+                return cur.value                      #@s_found
+            cur = cur.left if key < cur.key else cur.right   #@s_move
+        return None                                   #@s_miss
+
+    # ---------- delete (CLRS) ----------
+    def delete(self, key):
+        z = self.root
+        while z is not self.NIL and z.key != key:     #@d_find
+            z = z.left if key < z.key else z.right
+        if z is self.NIL: return False                #@d_none
+        y, y_color = z, z.color                       #@d_y
+        if z.left is self.NIL:                        #@d_noleft
+            x = z.right
+            self._transplant(z, z.right)              #@d_tr1
+        elif z.right is self.NIL:                     #@d_noright
+            x = z.left
+            self._transplant(z, z.left)               #@d_tr2
+        else:
+            y = z.right
+            while y.left is not self.NIL: y = y.left  #@d_min
+            y_color = y.color
+            x = y.right
+            if y.parent is z: x.parent = y
+            else:
+                self._transplant(y, y.right)
+                y.right = z.right; y.right.parent = y
+            self._transplant(z, y)                    #@d_tr3
+            y.left = z.left; y.left.parent = y
+            y.color = z.color                         #@d_ycolor
+        if y_color == BLACK:                          #@d_check
+            self._fix_delete(x)
+        return True
+
+    def _fix_delete(self, x):
+        while x is not self.root and x.color == BLACK:    #@x_while
+            if x is x.parent.left:                    #@x_side
+                w = x.parent.right                    #@x_w
+                if w.color == RED:                    #@x_case1
+                    w.color = BLACK; x.parent.color = RED
+                    self.rotate_left(x.parent)        #@x_c1rot
+                    w = x.parent.right
+                if w.left.color == BLACK and w.right.color == BLACK:   #@x_case2
+                    w.color = RED
+                    x = x.parent                      #@x_c2
+                else:
+                    if w.right.color == BLACK:        #@x_case3
+                        w.left.color = BLACK; w.color = RED
+                        self.rotate_right(w)          #@x_c3rot
+                        w = x.parent.right
+                    w.color = x.parent.color          #@x_case4
+                    x.parent.color = BLACK; w.right.color = BLACK
+                    self.rotate_left(x.parent)        #@x_c4rot
+                    x = self.root
+            else:
+                ...  # mirror image: swap left <-> right
+        x.color = BLACK                               #@x_end`
+};
+
+/* =====================================================================
+   2. TRACED TREES  (real algorithms; every important line calls emit())
+   ===================================================================== */
+const BLACK = 'B', RED = 'R';
+let UID = 0, model = null, timeline = [];
+
+/* snapshot of the tree as plain data (NIL sentinel and nulls are skipped) */
+function ser(n){
+  if (!n || n.nil) return null;
+  return {id:n.id, key:n.key, color:n.color, h:n.h, l:ser(n.left), r:ser(n.right)};
+}
+/* marks = [[node,'cur'], ...]  -> highlight map {id: class} */
+function emit(label, msg, kind, marks){
+  const hl = {};
+  (marks || []).forEach(([n, c]) => { if (n && !n.nil) hl[n.id] = c; });
+  timeline.push({label, msg, kind: kind || 'info', hl, snap: ser(model.root),
+                 op: model.opName, cmp: model.cmp, rot: model.rot});
+}
+const dirName = b => b ? 'left' : 'right';
+const colName = n => n.nil ? 'NIL (black)' : (n.color === RED ? 'RED' : 'BLACK');
+
+class Base { constructor(){ this.root = null; this.cmp = 0; this.rot = 0; this.opName = ''; }
+  search(key){
+    this.opName = `search(${key})`;
+    let cur = this.root, c = 0;
+    const NIL = this.NIL || null;
+    if (cur === NIL){ emit('s_start','Tree is empty – nothing to find','bad'); emit('s_miss',`${key} not found`,'bad'); return; }
+    emit('s_start','Start at the root','cmp',[[cur,'cur']]);
+    while (cur !== NIL){
+      this.cmp++; c++;
+      emit('s_cnt',`Compare ${key} with ${cur.key}  (comparison #${c})`,'cmp',[[cur,'cur']]);
+      if (key === cur.key){ emit('s_found',`Found ${key} after ${c} comparison${c>1?'s':''}`,'found',[[cur,'found']]); return; }
+      const goL = key < cur.key;
+      emit('s_move',`${key} ${goL?'<':'>'} ${cur.key} → go ${dirName(goL)}`,'cmp',[[cur,'cur']]);
+      cur = goL ? cur.left : cur.right;
+    }
+    emit('s_miss',`Reached the end of the path – ${key} is not in the tree (${c} comparisons)`,'bad');
+  }
+}
+
+/* ---------------- plain BST ---------------- */
+class BSTm extends Base {
+  mk(k){ return {id:++UID, key:k, left:null, right:null}; }
+  insert(key){
+    this.opName = `insert(${key})`;
+    const nn = this.mk(key);
+    emit('rootcheck','Is the tree empty?','cmp');
+    if (!this.root){ this.root = nn; emit('setroot',`Tree was empty → ${key} becomes the root`,'new',[[nn,'new']]); return; }
+    let cur = this.root;
+    emit('start',`Start at the root (${cur.key})`,'cmp',[[cur,'cur']]);
+    for(;;){
+      if (key === cur.key){ emit('dup',`${key} already exists – only the value is updated`,'found',[[cur,'found']]); return; }
+      const goL = key < cur.key, side = dirName(goL);
+      emit(goL?'goleft':'goright',`${key} ${goL?'<':'>'} ${cur.key} → go ${side}`,'cmp',[[cur,'cur']]);
+      if (!cur[side]){
+        emit(goL?'leftempty':'rightempty',`The ${side} slot of ${cur.key} is empty`,'cmp',[[cur,'cur']]);
+        cur[side] = nn;
+        emit(goL?'attachL':'attachR',`Attach ${key} as the ${side} child of ${cur.key}`,'new',[[nn,'new'],[cur,'cur']]);
+        return;
+      }
+      cur = cur[side];
+      emit(goL?'moveL':'moveR',`Move ${side} to ${cur.key}`,'cmp',[[cur,'cur']]);
+    }
+  }
+  delete(key){
+    this.opName = `delete(${key})`;
+    let parent = null, cur = this.root;
+    emit('d_find',`Look for ${key}`,'cmp', cur?[[cur,'cur']]:[]);
+    while (cur && cur.key !== key){
+      parent = cur; cur = key < cur.key ? cur.left : cur.right;
+      emit('d_find', cur ? `${key} ${key<parent.key?'<':'>'} ${parent.key} → move to ${cur.key}` : 'Reached None', 'cmp', cur?[[cur,'cur']]:[[parent,'cur']]);
+    }
+    if (!cur){ emit('d_none',`${key} is not in the tree – nothing to delete`,'bad'); return; }
+    emit('d_find',`Found ${key}`,'del',[[cur,'del']]);
+    if (cur.left && cur.right){
+      emit('d_two',`${cur.key} has two children → replace it with its inorder successor`,'cmp',[[cur,'del']]);
+      parent = cur; let succ = cur.right;
+      emit('d_succ',`Successor = leftmost node of the right subtree; start at ${succ.key}`,'cmp',[[succ,'cur'],[cur,'del']]);
+      while (succ.left){ parent = succ; succ = succ.left; emit('d_succ',`Go left → ${succ.key}`,'cmp',[[succ,'cur'],[cur,'del']]); }
+      emit('d_copy',`Copy the successor's key ${succ.key} into the node, then remove the successor`,'rot',[[cur,'rot'],[succ,'del']]);
+      cur.key = succ.key; cur = succ;
+      emit('d_copy',`Node now holds ${cur.key}; the old successor node will be unlinked`,'rot',[[succ,'del']]);
+    }
+    const child = cur.left || cur.right;
+    emit('d_child', child ? `${cur.key} has one child (${child.key}) → child takes its place` : `${cur.key} is a leaf → just remove it`,'del',[[cur,'del']]);
+    let lab;
+    if (!parent){ this.root = child; lab = 'd_root'; }
+    else if (parent.left === cur){ parent.left = child; lab = 'd_unlinkL'; }
+    else { parent.right = child; lab = 'd_unlinkR'; }
+    emit(lab,'Node removed – pointer updated','del', child?[[child,'cur']]:[]);
+  }
+}
+
+/* ---------------- AVL ---------------- */
+class AVLm extends Base {
+  mk(k){ return {id:++UID, key:k, left:null, right:null, h:1}; }
+  H(n){ return n ? n.h : 0; }
+  upd(n){ n.h = 1 + Math.max(this.H(n.left), this.H(n.right)); }
+  bf(n){ return this.H(n.left) - this.H(n.right); }
+  link(p, s, c){ if (!p) this.root = c; else p[s] = c; }
+  rotR(y, p, s){
+    const x = y.left;
+    emit('rr1',`Right rotation: ${x.key} rises above ${y.key}`,'rot',[[y,'bad'],[x,'rot']]);
+    y.left = x.right; x.right = y; this.upd(y); this.upd(x); this.link(p, s, x); this.rot++;
+    emit('rr3',`Rotated – ${x.key} is now the subtree root (rotation #${this.rot})`,'rot',[[x,'rot'],[y,'rot']]);
+    return x;
+  }
+  rotL(x, p, s){
+    const y = x.right;
+    emit('rl1',`Left rotation: ${y.key} rises above ${x.key}`,'rot',[[x,'bad'],[y,'rot']]);
+    x.right = y.left; y.left = x; this.upd(x); this.upd(y); this.link(p, s, y); this.rot++;
+    emit('rl3',`Rotated – ${y.key} is now the subtree root (rotation #${this.rot})`,'rot',[[y,'rot'],[x,'rot']]);
+    return y;
+  }
+  rebalance(node, p, s){
+    this.upd(node);
+    const b = this.bf(node), sg = b > 0 ? '+' : '';
+    if (b > 1){
+      emit('r_leftheavy',`${node.key}: height ${node.h}, balance factor ${sg}${b} → LEFT heavy`,'bad',[[node,'bad']]);
+      if (this.bf(node.left) < 0){
+        emit('r_lr',`Left child ${node.left.key} leans right → Left-Right case: rotate it left first`,'bad',[[node,'bad'],[node.left,'cur']]);
+        this.rotL(node.left, node, 'left');
+      } else emit('r_lr',`Left child ${node.left.key} leans left → Left-Left case: one right rotation`,'bad',[[node,'bad'],[node.left,'cur']]);
+      return this.rotR(node, p, s);
+    }
+    if (b < -1){
+      emit('r_rightheavy',`${node.key}: height ${node.h}, balance factor ${b} → RIGHT heavy`,'bad',[[node,'bad']]);
+      if (this.bf(node.right) > 0){
+        emit('r_rl',`Right child ${node.right.key} leans left → Right-Left case: rotate it right first`,'bad',[[node,'bad'],[node.right,'cur']]);
+        this.rotR(node.right, node, 'right');
+      } else emit('r_rl',`Right child ${node.right.key} leans right → Right-Right case: one left rotation`,'bad',[[node,'bad'],[node.right,'cur']]);
+      return this.rotL(node, p, s);
+    }
+    emit('r_ok',`${node.key}: height ${node.h}, balance factor ${sg}${b} ✓ balanced`,'ok',[[node,'cur']]);
+    return node;
+  }
+  insert(key){
+    this.opName = `insert(${key})`;
+    emit('i_entry',`insert(${key}) → recurse down from the root`,'info');
+    const was = this.root;
+    const r = this._ins(was, key, null, '');
+    this.root = r;
+    if (was === null) emit('i_create',`Tree was empty → ${key} becomes the root`,'new',[[r,'new']]);
+  }
+  _ins(node, key, p, s){
+    if (node === null) return this.mk(key);
+    if (key === node.key){ emit('i_dup',`${key} already exists`,'found',[[node,'found']]); return node; }
+    const goL = key < node.key, side = dirName(goL);
+    emit(goL?'i_lt':'i_gt',`${key} ${goL?'<':'>'} ${node.key} → go ${side}`,'cmp',[[node,'cur']]);
+    const before = node[side];
+    const r = this._ins(before, key, node, side);
+    node[side] = r;
+    if (before === null) emit('i_create',`New node ${key} attached as ${side} child of ${node.key}`,'new',[[r,'new'],[node,'cur']]);
+    return this.rebalance(node, p, s);
+  }
+  delete(key){
+    this.opName = `delete(${key})`;
+    emit('d_entry',`delete(${key}) → recurse down from the root`,'info');
+    this.root = this._del(this.root, key, null, '');
+  }
+  _del(node, key, p, s){
+    if (!node){ emit('d_none',`Reached None – ${key} is not in the tree`,'bad'); return null; }
+    if (key < node.key){
+      emit('d_lt',`${key} < ${node.key} → go left`,'cmp',[[node,'cur']]);
+      node.left = this._del(node.left, key, node, 'left');
+    } else if (key > node.key){
+      emit('d_gt',`${key} > ${node.key} → go right`,'cmp',[[node,'cur']]);
+      node.right = this._del(node.right, key, node, 'right');
+    } else {
+      if (!node.left){
+        emit('d_noleft',`Found ${key}: no left child → replace it by its right child`,'del',[[node,'del']]);
+        const c = node.right; this.link(p, s, c);
+        emit('d_noleft',`${key} removed`,'del', c?[[c,'cur']]:[]);
+        return c;
+      }
+      if (!node.right){
+        emit('d_noright',`Found ${key}: no right child → replace it by its left child`,'del',[[node,'del']]);
+        const c = node.left; this.link(p, s, c);
+        emit('d_noright',`${key} removed`,'del', c?[[c,'cur']]:[]);
+        return c;
+      }
+      emit('d_succ0',`Found ${key} with two children → use the inorder successor`,'del',[[node,'del']]);
+      let succ = node.right;
+      while (succ.left){ succ = succ.left; emit('d_succloop',`Go left → ${succ.key}`,'cmp',[[succ,'cur'],[node,'del']]); }
+      emit('d_copy',`Copy successor key ${succ.key} into the node`,'rot',[[node,'rot'],[succ,'del']]);
+      node.key = succ.key;
+      emit('d_recur',`Now delete ${succ.key} from the right subtree`,'del',[[node,'rot'],[succ,'del']]);
+      node.right = this._del(node.right, succ.key, node, 'right');
+    }
+    return this.rebalance(node, p, s);
+  }
+}
+
+/* ---------------- Red-Black (CLRS, NIL sentinel) ---------------- */
+class RBm extends Base {
+  constructor(){ super(); this.NIL = {nil:true, color:BLACK, left:null, right:null, parent:null}; this.root = this.NIL; }
+  mk(k){ return {id:++UID, key:k, color:RED, left:this.NIL, right:this.NIL, parent:null}; }
+  rotL(x){
+    const N = this.NIL, y = x.right;
+    emit('rl1',`Left rotation around ${x.key}: ${y.key} moves up`,'rot',[[x,'bad'],[y,'rot']]);
+    x.right = y.left; if (y.left !== N) y.left.parent = x;
+    y.parent = x.parent;
+    if (!x.parent) this.root = y; else if (x === x.parent.left) x.parent.left = y; else x.parent.right = y;
+    y.left = x; x.parent = y; this.rot++;
+    emit('rl5',`Rotated – ${y.key} is now above ${x.key} (rotation #${this.rot})`,'rot',[[y,'rot'],[x,'rot']]);
+  }
+  rotR(x){
+    const N = this.NIL, y = x.left;
+    emit('rl1',`Right rotation around ${x.key}: ${y.key} moves up (mirror of rotate_left)`,'rot',[[x,'bad'],[y,'rot']]);
+    x.left = y.right; if (y.right !== N) y.right.parent = x;
+    y.parent = x.parent;
+    if (!x.parent) this.root = y; else if (x === x.parent.right) x.parent.right = y; else x.parent.left = y;
+    y.right = x; x.parent = y; this.rot++;
+    emit('rl5',`Rotated – ${y.key} is now above ${x.key} (rotation #${this.rot})`,'rot',[[y,'rot'],[x,'rot']]);
+  }
+  rot_(x, toLeft){ if (toLeft) this.rotL(x); else this.rotR(x); }
+  tr(u, v){
+    if (!u.parent) this.root = v; else if (u === u.parent.left) u.parent.left = v; else u.parent.right = v;
+    v.parent = u.parent;
+  }
+  insert(key){
+    this.opName = `insert(${key})`;
+    const N = this.NIL;
+    let parent = null, cur = this.root;
+    emit('i_while','Walk down from the root exactly like a plain BST','cmp', cur!==N?[[cur,'cur']]:[]);
+    while (cur !== N){
+      parent = cur;
+      if (key === cur.key){ emit('i_dup',`${key} already exists`,'found',[[cur,'found']]); return; }
+      const goL = key < cur.key;
+      cur = goL ? cur.left : cur.right;
+      emit('i_move',`${key} ${goL?'<':'>'} ${parent.key} → go ${dirName(goL)}`,'cmp',[[parent,'cur']]);
+    }
+    const z = this.mk(key); z.parent = parent;
+    if (!parent) this.root = z; else if (key < parent.key) parent.left = z; else parent.right = z;
+    emit('i_attach',`Attach ${key} as a RED leaf`,'new',[[z,'new']]);
+    this.fixIns(z);
+  }
+  fixIns(z){
+    emit('i_fix','Repair any red-black rule that the new RED node may have broken','info',[[z,'new']]);
+    while (z.parent && z.parent.color === RED){
+      const par = z.parent, gp = par.parent, L = par === gp.left, B = L ? 'right' : 'left', uncle = gp[B];
+      emit('f_while',`Parent ${par.key} and node ${z.key} are both RED → rule violated`,'bad',[[z,'new'],[par,'bad']]);
+      emit('f_uncle',`Look at the uncle: ${uncle.nil ? 'NIL (BLACK)' : uncle.key + ' (' + colName(uncle) + ')'}`,'cmp',[[uncle,'cur'],[gp,'rot'],[par,'bad'],[z,'new']]);
+      if (uncle.color === RED){
+        par.color = BLACK; uncle.color = BLACK; gp.color = RED;
+        emit('f_c1a','Case 1 – uncle RED: recolor parent & uncle BLACK, grandparent RED','fix',[[par,'cur'],[uncle,'cur'],[gp,'rot']]);
+        z = gp;
+        emit('f_c1b',`Continue checking from the grandparent ${z.key}`,'cmp',[[z,'rot']]);
+      } else {
+        if (z === par[B]){
+          emit('f_case2','Case 2 – uncle BLACK, node is an inner child (triangle): rotate the parent','rot',[[z,'new'],[par,'bad']]);
+          z = par; this.rot_(z, L);
+        }
+        emit('f_case3','Case 3 – straight line: parent BLACK, grandparent RED, rotate grandparent','rot',[[z.parent,'cur'],[gp,'rot']]);
+        z.parent.color = BLACK; gp.color = RED;
+        this.rot_(gp, !L);
+      }
+    }
+    this.root.color = BLACK;
+    emit('f_root','The root is always BLACK – tree is valid again','ok',[[this.root,'cur']]);
+  }
+  delete(key){
+    this.opName = `delete(${key})`;
+    const N = this.NIL;
+    let z = this.root;
+    emit('d_find',`Look for ${key}`,'cmp', z!==N?[[z,'cur']]:[]);
+    while (z !== N && z.key !== key){
+      const pz = z; z = key < z.key ? z.left : z.right;
+      emit('d_find', z===N ? 'Reached NIL' : `${key} ${key<pz.key?'<':'>'} ${pz.key} → move to ${z.key}`, 'cmp', z!==N?[[z,'cur']]:[[pz,'cur']]);
+    }
+    if (z === N){ emit('d_none',`${key} is not in the tree – nothing to delete`,'bad'); return; }
+    let y = z, yColor = y.color, x;
+    emit('d_y',`Found ${key} (${colName(z)}). Remember the colour of the node that is really removed`,'del',[[z,'del']]);
+    if (z.left === N){
+      x = z.right;
+      emit('d_noleft','No left child → splice the node out, its right child moves up','del',[[z,'del']]);
+      this.tr(z, z.right);
+      emit('d_tr1',`${key} removed`,'del',[[x,'cur']]);
+    } else if (z.right === N){
+      x = z.left;
+      emit('d_noright','No right child → splice the node out, its left child moves up','del',[[z,'del']]);
+      this.tr(z, z.left);
+      emit('d_tr2',`${key} removed`,'del',[[x,'cur']]);
+    } else {
+      y = z.right; while (y.left !== N) y = y.left;
+      emit('d_min',`Two children → successor ${y.key} (${colName(y)}) will take its place`,'cmp',[[y,'cur'],[z,'del']]);
+      yColor = y.color; x = y.right;
+      if (y.parent === z) x.parent = y;
+      else { this.tr(y, y.right); y.right = z.right; y.right.parent = y; }
+      this.tr(z, y); y.left = z.left; y.left.parent = y; y.color = z.color;
+      emit('d_ycolor',`Successor takes ${key}'s position and colour`,'rot',[[y,'rot']]);
+    }
+    if (yColor === BLACK){
+      emit('d_check','A BLACK node was removed → one path lost a black node, repair needed','bad',[[x,'bad'],[x.parent,'cur']]);
+      this.fixDel(x);
+    } else emit('d_check','The removed node was RED → no rule is broken','ok');
+  }
+  fixDel(x){
+    while (x !== this.root && x.color === BLACK){
+      const par = x.parent, L = x === par.left, A = L ? 'left' : 'right', B = L ? 'right' : 'left';
+      let w = par[B];
+      emit('x_w',`x carries an "extra black". Its sibling is ${w.key} (${colName(w)})`,'cmp',[[x,'bad'],[par,'cur'],[w,'cur']]);
+      if (w.color === RED){
+        emit('x_case1','Case 1 – sibling RED: recolor and rotate so the sibling becomes BLACK','rot',[[w,'bad'],[par,'cur']]);
+        w.color = BLACK; par.color = RED; this.rot_(par, L); w = par[B];
+      }
+      if (w[A].color === BLACK && w[B].color === BLACK){
+        emit('x_case2','Case 2 – sibling and both its children BLACK','cmp',[[w,'cur']]);
+        w.color = RED; x = par;
+        emit('x_c2',`Recolor sibling RED, push the extra black up to ${x.key}`,'fix',[[w,'cur'],[x,'bad']]);
+      } else {
+        if (w[B].color === BLACK){
+          emit('x_case3','Case 3 – far nephew BLACK, near nephew RED: rotate the sibling','rot',[[w,'bad'],[w[A],'cur']]);
+          w[A].color = BLACK; w.color = RED; this.rot_(w, !L); w = par[B];
+        }
+        w.color = par.color; par.color = BLACK; w[B].color = BLACK;
+        emit('x_case4','Case 4 – far nephew RED: recolor and rotate the parent; extra black absorbed','fix',[[w,'cur'],[par,'bad'],[w[B],'cur']]);
+        this.rot_(par, L); x = this.root;
+      }
+    }
+    x.color = BLACK;
+    emit('x_end','Colour x BLACK – every red-black rule holds again','ok',[[x,'cur']]);
+  }
+}
+
+/* =====================================================================
+   3. PLAYBACK STATE
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+let treeKind = 'bst', idx = 0, playing = false, acc = 0, speed = 1, labelMap = {};
+const KIND_LABEL = {cmp:'compare', new:'insert', found:'found', ok:'ok', bad:'problem', rot:'rotate', del:'delete', fix:'recolor', info:'info'};
+const KIND_COLOR = {cmp:'--cur', new:'--new', found:'--found', ok:'--ok', bad:'--bad', rot:'--rot', del:'--del', fix:'--cur', info:'--info'};
+
+function resetModel(){
+  UID = 0;
+  model = treeKind === 'bst' ? new BSTm() : treeKind === 'avl' ? new AVLm() : new RBm();
+  timeline = [{label:null, msg:'Empty tree. Insert a key to begin, or load the lab sample.', kind:'info', hl:{}, snap:null, op:'', cmp:0, rot:0}];
+  idx = 0; playing = false; acc = 0;
+}
+function runOp(fn){
+  const start = timeline.length;
+  fn();
+  if (timeline.length > start){
+    appendLog(start); updateScrub();
+    goto(start); playing = true; acc = 0; drawPlay();
+  }
+}
+const num = () => { const v = parseInt($('key').value, 10); return Number.isFinite(v) ? v : null; };
+const countNodes = () => { let c = 0; (function w(n){ if (n){ c++; w(n.l); w(n.r); } })(timeline[timeline.length-1].snap); return c; };
+function doInsert(k){ if (k===null) return; if (countNodes() >= 63){ flash('Limit of 63 nodes reached'); return; } model.insert(k); }
+function doSearch(k){ if (k!==null) model.search(k); }
+function doDelete(k){ if (k!==null) model.delete(k); }
+function flash(t){ $('msgtext').textContent = t; }
+
+/* =====================================================================
+   4. RENDERING  (own tween engine: every node / edge / camera eases to its target)
+   ===================================================================== */
+const NS = 'http://www.w3.org/2000/svg';
+const SX = 62, SY = 86, R = 22;
+const view = { nodes:new Map(), edges:new Map(), cam:{x:0,y:0,s:1}, camT:{x:0,y:0,s:1}, W:800, H:500, init:false };
+
+function layout(root){
+  const out = []; let i = 0;
+  (function go(n, d, pid){
+    if (!n) return;
+    go(n.l, d+1, n.id);
+    out.push({id:n.id, key:n.key, color:n.color, h:n.h, x:(i++)*SX, y:d*SY, pid, l:n.l, r:n.r});
+    go(n.r, d+1, n.id);
+  })(root, 0, null);
+  return out;
+}
+function makeNode(id){
+  const g = document.createElementNS(NS,'g'); g.setAttribute('class','node');
+  const c = document.createElementNS(NS,'circle'); c.setAttribute('r',R); c.setAttribute('class','c');
+  const t = document.createElementNS(NS,'text');
+  const s = document.createElementNS(NS,'text'); s.setAttribute('class','sub'); s.setAttribute('y',R+14);
+  g.append(c,t,s); $('nodes').appendChild(g);
+  return {id, el:g, t, s, x:0, y:0, sc:.3, o:0, tx:0, ty:0, tsc:1, to:1, pid:null, key:null, cls:'', live:true};
+}
+function makeEdge(id){
+  const l = document.createElementNS(NS,'line'); l.setAttribute('class','edge'); $('edges').appendChild(l);
+  return l;
+}
+function applyStep(st){
+  const lay = layout(st.snap), ids = new Set(lay.map(n => n.id)), byId = new Map(lay.map(n => [n.id, n]));
+  const H = n => n ? n.h : 0;
+  lay.forEach(n => {
+    let rec = view.nodes.get(n.id);
+    if (!rec){
+      rec = makeNode(n.id); view.nodes.set(n.id, rec);
+      const pr = n.pid !== null ? view.nodes.get(n.pid) : null;       // grow out of the parent
+      rec.x = pr ? pr.x : n.x; rec.y = pr ? pr.y : n.y - 50;
+      if (!view.init){ rec.x = n.x; rec.y = n.y; }
+    }
+    rec.live = true; rec.tx = n.x; rec.ty = n.y; rec.tsc = 1; rec.to = 1; rec.pid = n.pid;
+    if (rec.key !== n.key){ rec.t.textContent = n.key; rec.key = n.key; }
+    const hl = st.hl[n.id] || '';
+    const rb = n.color === RED ? 'rb-r' : n.color === BLACK ? 'rb-b' : '';
+    const cls = `node ${rb} ${hl}`.trim();
+    if (rec.cls !== cls){ rec.el.setAttribute('class', cls); rec.cls = cls; }
+    if (treeKind === 'avl'){
+      const b = H(n.l) - H(n.r);
+      rec.s.textContent = `h${n.h} · bf ${b>0?'+':''}${b}`;
+      rec.s.setAttribute('class', Math.abs(b) > 1 ? 'sub bad' : 'sub');
+    } else rec.s.textContent = '';
+  });
+  view.nodes.forEach((rec, id) => { if (!ids.has(id)){ rec.live = false; rec.to = 0; rec.tsc = .3; } });
+  lay.forEach(n => {                                                  // edges follow child's parent
+    if (n.pid !== null){
+      if (!view.edges.has(n.id)) view.edges.set(n.id, makeEdge(n.id));
+      const e = view.edges.get(n.id);
+      const hot = st.hl[n.id] ? ' hot' : '';
+      e.setAttribute('class','edge'+hot);
+    }
+  });
+  // camera target
+  if (lay.length){
+    const xs = lay.map(n => n.x), ys = lay.map(n => n.y);
+    const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
+    const bw = maxx - minx + 2*R + 70, bh = maxy - miny + 2*R + 90;
+    view.camT.s = Math.min(1.25, (view.W) / bw, (view.H - 70) / bh);
+    view.camT.x = (minx + maxx) / 2; view.camT.y = (miny + maxy) / 2 + 12;
+  } else { view.camT.s = 1; view.camT.x = 0; view.camT.y = 0; }
+  $('empty').style.opacity = lay.length ? 0 : 1;
+  view.init = true;
+  return {lay, byId};
+}
+
+let lastT = performance.now();
+function frame(t){
+  const dt = Math.min(.05, (t - lastT) / 1000); lastT = t;
+  if (playing){
+    acc += dt * 1000;
+    if (acc >= 1050 / speed){
+      acc = 0;
+      if (idx < timeline.length - 1) goto(idx + 1); else { playing = false; drawPlay(); }
+    }
+  }
+  const rate = 3.2 + 4.2 * Math.pow(speed, .75), k = 1 - Math.exp(-rate * dt);
+  const cam = view.cam, ct = view.camT, ck = 1 - Math.exp(-(rate * .7) * dt);
+  cam.x += (ct.x - cam.x) * ck; cam.y += (ct.y - cam.y) * ck; cam.s += (ct.s - cam.s) * ck;
+  $('world').setAttribute('transform', `translate(${view.W/2} ${view.H/2 - 10}) scale(${cam.s}) translate(${-cam.x} ${-cam.y})`);
+  view.nodes.forEach((r, id) => {
+    r.x += (r.tx - r.x) * k; r.y += (r.ty - r.y) * k; r.sc += (r.tsc - r.sc) * k; r.o += (r.to - r.o) * k;
+    r.el.setAttribute('transform', `translate(${r.x.toFixed(2)} ${r.y.toFixed(2)}) scale(${r.sc.toFixed(3)})`);
+    r.el.style.opacity = r.o.toFixed(3);
+    if (!r.live && r.o < .02){ r.el.remove(); view.nodes.delete(id); const e = view.edges.get(id); if (e){ e.remove(); view.edges.delete(id); } }
+  });
+  view.edges.forEach((e, id) => {
+    const c = view.nodes.get(id), p = c && view.nodes.get(c.pid);
+    if (!c || !p){ e.style.opacity = 0; return; }
+    const dx = c.x - p.x, dy = c.y - p.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+    e.setAttribute('x1', (p.x + ux * R * p.sc).toFixed(2)); e.setAttribute('y1', (p.y + uy * R * p.sc).toFixed(2));
+    e.setAttribute('x2', (c.x - ux * R * c.sc).toFixed(2)); e.setAttribute('y2', (c.y - uy * R * c.sc).toFixed(2));
+    e.style.opacity = Math.min(c.o, p.o).toFixed(3);
+  });
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+   5. PANELS: stats, message, code, log, scrubber
+   ===================================================================== */
+function ht(n){ return n ? 1 + Math.max(ht(n.l), ht(n.r)) : 0; }
+function goto(i){
+  idx = Math.max(0, Math.min(timeline.length - 1, i));
+  const st = timeline[idx], {lay} = applyStep(st);
+  // message
+  const kc = KIND_COLOR[st.kind];
+  $('chip').textContent = KIND_LABEL[st.kind]; $('chip').style.background = `var(${kc})`;
+  $('msgtext').textContent = (st.op ? st.op + ' · ' : '') + st.msg;
+  $('stepno').textContent = `${idx} / ${timeline.length - 1}`;
+  // stats
+  const H = n => n ? n.h : 0;
+  let html = `<span class="stat">Nodes<b>${lay.length}</b></span><span class="stat">Height<b>${ht(st.snap)}</b></span>` +
+             `<span class="stat">Search comparisons<b>${st.cmp}</b></span>`;
+  if (treeKind !== 'bst') html += `<span class="stat">Rotations<b>${st.rot}</b></span>`;
+  if (treeKind === 'avl'){
+    const ok = lay.every(n => Math.abs(H(n.l) - H(n.r)) <= 1);
+    html += `<span class="stat ${ok?'good':'bad'}">Balanced<b>${ok?'yes':'fixing…'}</b></span>`;
+  }
+  $('stats').innerHTML = html;
+  // code line
+  document.querySelectorAll('.ln.active').forEach(e => { e.classList.remove('active'); e.className = e.className.replace(/ k-\w+/g,''); });
+  const li = st.label ? labelMap[st.label] : undefined;
+  if (li !== undefined){
+    const el = $('code').children[li]; el.classList.add('active', 'k-' + st.kind);
+    const pane = $('codePane'); pane.scrollTo({top: Math.max(0, el.offsetTop - pane.clientHeight / 2), behavior: 'smooth'});
+  }
+  // log + scrubber
+  document.querySelectorAll('.li.cur').forEach(e => e.classList.remove('cur'));
+  const le = document.querySelector(`.li[data-i="${idx}"]`);
+  if (le){ le.classList.add('cur'); const lp = $('logPane'); if (!lp.classList.contains('hidden')) lp.scrollTo({top: Math.max(0, le.offsetTop - lp.clientHeight / 2), behavior:'smooth'}); }
+  $('scrub').value = idx;
+}
+function updateScrub(){ $('scrub').max = timeline.length - 1; }
+function buildCode(){
+  const src = LISTINGS[treeKind].split('\n'); labelMap = {};
+  const out = src.map((line, i) => {
+    const m = line.match(/\s*#@(\w+)\s*$/);
+    if (m){ labelMap[m[1]] = i; line = line.replace(/\s*#@\w+\s*$/, ''); }
+    return `<div class="ln"><span class="no">${i+1}</span><span class="tx">${highlight(line)}</span></div>`;
+  });
+  $('code').innerHTML = out.join('');
+}
+function highlight(line){
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const re = /(#.*$)|("[^"]*"|'[^']*')|\b(def|class|if|elif|else|while|return|is|not|and|or|None|True|False|in|for|break)\b|\b(self)\b|\b(\d+)\b|\b([A-Za-z_]\w*)(?=\()/g;
+  let res = '', last = 0, m;
+  while ((m = re.exec(line))){
+    res += esc(line.slice(last, m.index));
+    const cls = m[1] ? 'cm' : m[2] ? 'str' : m[3] ? 'kw' : m[4] ? 'self' : m[5] ? 'num' : 'fn';
+    res += `<span class="tk-${cls}">${esc(m[0])}</span>`; last = re.lastIndex;
+  }
+  return res + esc(line.slice(last));
+}
+function buildLog(){ $('log').innerHTML = ''; appendLog(0); }
+function appendLog(from){
+  const box = $('log');
+  for (let i = from; i < timeline.length; i++){
+    const st = timeline[i];
+    if (i === 0 || st.op !== timeline[i-1].op){
+      if (st.op){ const h = document.createElement('div'); h.className = 'lh'; h.textContent = st.op; box.appendChild(h); }
+    }
+    const d = document.createElement('div'); d.className = 'li'; d.dataset.i = i;
+    d.style.setProperty('--c', `var(${KIND_COLOR[st.kind]})`);
+    d.innerHTML = `<span class="n">${i}</span><i></i><span></span>`; d.lastChild.textContent = st.msg;
+    d.onclick = () => { playing = false; drawPlay(); goto(i); };
+    box.appendChild(d);
+  }
+}
+
+/* =====================================================================
+   6. CONTROLS
+   ===================================================================== */
+const ICON_PLAY = '<svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const ICON_PAUSE = '<svg class="ic" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+function drawPlay(){ $('bPlay').innerHTML = playing ? ICON_PAUSE : ICON_PLAY; }
+function togglePlay(){
+  if (!playing && idx >= timeline.length - 1){ if (timeline.length < 2) return; goto(0); }
+  playing = !playing; acc = 0; drawPlay();
+}
+function setSpeed(){
+  const v = +$('speed').value; speed = .25 * Math.pow(2, v / 100 * 5);
+  $('speedOut').textContent = speed.toFixed(speed < 1 ? 2 : 1) + '×';
+  document.documentElement.style.setProperty('--dur', Math.max(90, 480 / speed) + 'ms');
+}
+function setTree(k){
+  treeKind = k; view.nodes.forEach(r => r.el.remove()); view.edges.forEach(e => e.remove());
+  view.nodes.clear(); view.edges.clear(); view.init = false;
+  document.querySelectorAll('#treeSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === k));
+  resetModel(); buildCode(); buildLog(); updateScrub(); drawPlay(); goto(0);
+}
+function preset(keys){ runOp(() => keys.forEach(doInsert)); }
+function shuffled(n){ const a = Array.from({length:n}, (_, i) => i + 1); for (let i = n - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+$('treeSeg').onclick = e => { if (e.target.dataset.t) setTree(e.target.dataset.t); };
+$('bIns').onclick = () => runOp(() => doInsert(num()));
+$('bSea').onclick = () => runOp(() => doSearch(num()));
+$('bDel').onclick = () => runOp(() => doDelete(num()));
+$('bBulk').onclick = () => {
+  const ks = $('bulk').value.split(/[\s,;]+/).map(s => parseInt(s, 10)).filter(Number.isFinite);
+  if (ks.length) preset(ks);
+};
+$('pLab').onclick = () => preset([10, 20, 30, 40, 50, 25]);
+$('pSeq').onclick = () => preset(Array.from({length:15}, (_, i) => i + 1));
+$('pRnd').onclick = () => preset(shuffled(15));
+$('pClr').onclick = () => setTree(treeKind);
+$('bPlay').onclick = togglePlay;
+$('bNext').onclick = () => { playing = false; drawPlay(); goto(idx + 1); };
+$('bPrev').onclick = () => { playing = false; drawPlay(); goto(idx - 1); };
+$('bFirst').onclick = () => { playing = false; drawPlay(); goto(0); };
+$('bLast').onclick = () => { playing = false; drawPlay(); goto(timeline.length - 1); };
+$('speed').oninput = setSpeed;
+$('scrub').oninput = e => { playing = false; drawPlay(); goto(+e.target.value); };
+$('key').addEventListener('keydown', e => { if (e.key === 'Enter') $('bIns').click(); });
+$('bulk').addEventListener('keydown', e => { if (e.key === 'Enter') $('bBulk').click(); });
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.code === 'Space'){ e.preventDefault(); togglePlay(); }
+  else if (e.key === 'ArrowRight') $('bNext').click();
+  else if (e.key === 'ArrowLeft') $('bPrev').click();
+  else if (e.key === 'Home') $('bFirst').click();
+  else if (e.key === 'End') $('bLast').click();
+});
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  $('codePane').classList.toggle('hidden', b.dataset.p !== 'code');
+  $('logPane').classList.toggle('hidden', b.dataset.p !== 'log');
+  goto(idx);
+});
+$('themeBtn').onclick = () => {
+  const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+};
+new ResizeObserver(() => { const b = $('stage').getBoundingClientRect(); view.W = b.width; view.H = b.height; goto(idx); }).observe($('stage'));
+
+/* ---------- start ---------- */
+setSpeed(); setTree('bst'); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
