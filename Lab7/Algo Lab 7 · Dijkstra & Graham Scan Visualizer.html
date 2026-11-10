@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Algo Lab 7 · Dijkstra &amp; Graham Scan Visualizer</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark;
+--bg:#0a0f1f;--bg2:#141c3a;--panel:rgba(22,30,62,.72);--ink:#e9edff;--mute:#8e99cf;--line:#2c386e;--acc:#5eead4;--acc2:#a78bfa;--ok:#34d399;--bad:#fb7185;--warn:#fbbf24;--t:500ms}
+@media(prefers-color-scheme:light){:root:not([data-theme=dark]){color-scheme:light;--bg:#f3f5ff;--bg2:#e4e9ff;--panel:rgba(255,255,255,.85);--ink:#1a2146;--mute:#5c6699;--line:#c5cdf0;--acc:#0d9488;--acc2:#6d4aed;--ok:#059669;--bad:#e11d48;--warn:#d97706}}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(900px 500px at 10% -10%,var(--bg2),transparent),radial-gradient(800px 500px at 100% 0,color-mix(in srgb,var(--acc2) 22%,transparent),transparent),var(--bg);padding-bottom:110px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:18px 22px 6px}
+h1{font-size:20px;margin:0;letter-spacing:.2px}h1 span{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.tabs{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.tabs button{border:0;background:none;color:var(--mute);padding:8px 16px;border-radius:9px;font:600 14px inherit;font-family:inherit;cursor:pointer;transition:all .3s}
+.tabs button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#071022}
+main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;padding:12px 22px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;backdrop-filter:blur(10px);box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.card h2{margin:0 0 8px;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--mute)}
+svg{width:100%;height:auto;display:block}
+.edge{stroke:var(--line);stroke-width:3;stroke-linecap:round;transition:stroke var(--t),stroke-width var(--t),opacity var(--t)}
+.edge.tree{stroke:var(--ok);stroke-width:4}.edge.hot{stroke:var(--warn);stroke-width:6}
+.edge.blk{stroke:var(--bad);stroke-dasharray:3 9;opacity:.8}
+.hit{stroke:transparent;stroke-width:18;cursor:pointer}
+.w{fill:var(--mute);font:700 13px system-ui;text-anchor:middle;paint-order:stroke;stroke:var(--bg);stroke-width:6px;pointer-events:none}
+.node circle{fill:var(--bg2);stroke:var(--acc2);stroke-width:3;transition:fill var(--t),stroke var(--t),transform var(--t);transform-box:fill-box;transform-origin:center}
+.node.fr circle{stroke:var(--warn)}.node.done circle{fill:color-mix(in srgb,var(--ok) 35%,var(--bg2));stroke:var(--ok)}
+.node.cur circle{fill:color-mix(in srgb,var(--warn) 45%,var(--bg2));stroke:var(--warn);transform:scale(1.18)}
+.nid{fill:var(--ink);font:700 16px system-ui;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.nm{fill:var(--mute);font:11px system-ui;text-anchor:middle;pointer-events:none}
+.bd{fill:var(--acc);font:700 13px ui-monospace,Menlo,monospace;text-anchor:middle;pointer-events:none}
+.gd{fill:var(--line);opacity:.7}
+.pt circle{fill:var(--bg2);stroke:var(--acc2);stroke-width:3;transition:fill var(--t),stroke var(--t),transform var(--t);transform-box:fill-box;transform-origin:center}
+.pt.st circle{fill:color-mix(in srgb,var(--ok) 40%,var(--bg2));stroke:var(--ok)}
+.pt.an circle{stroke:var(--acc);fill:color-mix(in srgb,var(--acc) 40%,var(--bg2))}
+.pt.cd circle{stroke:var(--warn);fill:color-mix(in srgb,var(--warn) 45%,var(--bg2));transform:scale(1.35)}
+.pt.pp circle{stroke:var(--bad);fill:color-mix(in srgb,var(--bad) 55%,var(--bg2));transform:scale(1.5)}
+.pt text{fill:var(--mute);font:11px ui-monospace,monospace;text-anchor:middle;pointer-events:none}
+.pt .ord{fill:var(--acc);font:700 12px system-ui}
+.hl{stroke:var(--ok);stroke-width:4;stroke-linecap:round;transition:opacity var(--t)}
+.cl{stroke:var(--warn);stroke-width:3;stroke-dasharray:6 6;transition:opacity var(--t)}
+.poly{fill:color-mix(in srgb,var(--ok) 20%,transparent);stroke:var(--ok);stroke-width:4;stroke-linejoin:round;transition:opacity calc(var(--t)*1.5)}
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px}
+.cell{border:1px solid var(--line);border-radius:12px;padding:6px 8px;text-align:center;transition:all var(--t);background:color-mix(in srgb,var(--bg2) 70%,transparent)}
+.cell b{display:block;font:700 18px ui-monospace,monospace;color:var(--acc);transition:transform var(--t)}
+.cell small{color:var(--mute);font-size:11px;display:block}
+.cell.cur{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 40%,transparent)}.cell.cur b{transform:scale(1.2)}
+.cell.done{border-color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-top:8px;align-items:center}
+.chips span{padding:4px 10px;border-radius:999px;border:1px solid var(--line);font:600 13px ui-monospace,monospace;animation:pop .35s ease}
+.chips span.top{border-color:var(--ok);color:var(--ok)}.chips em{color:var(--mute);font-style:normal;font-size:12px;margin-right:4px}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.ctab{display:flex;gap:6px;margin-bottom:8px}.ctab button{flex:1;border:1px solid var(--line);background:none;color:var(--mute);padding:7px;border-radius:10px;font:600 13px inherit;font-family:inherit;cursor:pointer;transition:all .3s}
+.ctab button.on{color:#071022;background:var(--acc);border-color:var(--acc)}
+#code{max-height:430px;overflow:auto;position:relative;scroll-behavior:smooth}
+.ln{display:flex;gap:10px;padding:5px 8px;border-radius:9px;border-left:3px solid transparent;transition:background var(--t),border-color var(--t)}
+.ln.on{background:color-mix(in srgb,var(--acc) 16%,transparent);border-left-color:var(--acc)}
+.no{color:var(--mute);font:12px ui-monospace,monospace;width:18px;text-align:right;padding-top:2px;flex:none}
+code{font:13px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace;white-space:pre;display:block}
+code i{font-style:normal}i.k{color:var(--acc2)}i.n{color:var(--warn)}i.f{color:var(--acc)}i.c{color:var(--mute)}
+.ex{margin:0;max-height:0;overflow:hidden;opacity:0;color:var(--mute);font-size:13px;transition:max-height .5s ease,opacity .5s ease,margin .5s}
+#code.exp .ex{max-height:140px;opacity:1;margin:3px 0 4px}#code.exp .ln.on .ex{color:var(--ink)}
+#desc{margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 10%,transparent),color-mix(in srgb,var(--acc2) 10%,transparent));min-height:64px;transition:opacity .3s}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--panel);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;z-index:5}
+.bar button,.tool button{border:1px solid var(--line);background:var(--bg2);color:var(--ink);border-radius:12px;padding:8px 14px;font:600 14px inherit;font-family:inherit;cursor:pointer;transition:transform .15s,background .3s}
+.bar button:hover,.tool button:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--acc2) 30%,var(--bg2))}
+#play{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#071022;border:0;min-width:92px}
+.bar label{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}
+input[type=range]{accent-color:var(--acc);cursor:pointer}#bar{width:min(38vw,320px)}
+.tool{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;color:var(--mute);font-size:13px}
+.nt{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}.nt th,.nt td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+.nt th{color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.8px}.nt td.g{color:var(--ok);font-weight:700}
+#notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px;padding:12px 22px}
+#notes h3{margin:14px 0 4px;font-size:15px}#notes p{margin:6px 0;color:var(--mute);font-size:14px}#notes b.k{color:var(--ink)}
+.res{animation:pop .45s ease}.res p{color:var(--ink)}
+.tool button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#071022;border:0}
+.rc{fill:var(--bg2);stroke:var(--line);transition:fill var(--t)}.rc.d{fill:color-mix(in srgb,var(--ok) 40%,var(--bg2))}.rc.c{fill:color-mix(in srgb,var(--warn) 55%,var(--bg2))}
+.rt{fill:var(--ink);font:11px system-ui;text-anchor:middle;pointer-events:none}.rl{fill:var(--mute);font:600 13px system-ui}
+.rb{transition:width calc(var(--t)*1.2) ease}
+.chain{fill:none;stroke:var(--ok);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}.chain.c1{stroke:var(--acc2)}
+.best{stroke:var(--warn);stroke-width:5;stroke-linecap:round}
+.ne{stroke:var(--mute);stroke-width:3;fill:none}.ne.w{stroke:var(--warn);stroke-width:5}.ne.b{stroke:var(--bad);stroke-width:5;stroke-dasharray:6 6}.ne.o{stroke:var(--ok);stroke-width:5}
+.hide{display:none!important}
+</style></head><body>
+<header><h1><span>Algo Lab 7</span> · Visual Studio <small style="color:var(--mute);font:12px ui-monospace,monospace">algorithms_lab7.py</small></h1>
+<div class="tabs"><button id="m-dij" class="on">Set A · Dijkstra</button><button id="m-gra">Set B · Graham Scan</button><button id="m-ben">Benchmark</button><button id="m-not">Self-learning notes</button></div></header>
+<main id="main">
+<div>
+ <div class="card"><h2 id="st">Stage</h2><svg id="svg" viewBox="0 0 600 380" role="img" aria-label="Algorithm stage"></svg>
+  <div class="tool" id="tdij">Tip: click any road to block it (rush hour) and watch the routes change.<button id="unb">Unblock all</button></div>
+  <div class="tool hide" id="tgra">Click the grid to add a point.<button id="rnd">Random points</button><button id="smp">Sample</button><button id="col">Collinear test</button></div>
+  <div class="tool hide" id="tben">Nodes V <input id="bv" type="range" min="200" max="2000" step="100" value="1000"><b id="bvv">1000</b><button id="bsp">Sparse E≈2V</button><button id="bde">Dense E≈V²/4</button><button id="brn">Re-run</button></div></div>
+ <div class="card" style="margin-top:16px"><h2 id="ch">Cells</h2><div class="cells" id="cells"></div><div class="chips" id="chips"></div></div>
+</div>
+<div>
+ <div class="card"><div class="ctab"><button id="c-code" class="on">Code</button><button id="c-exp">Explain every line</button></div>
+ <div id="code"></div><div id="desc"></div></div>
+</div>
+</main>
+<section id="notes" class="hide">
+ <div class="card"><h2>Set A · Self-learning · Dijkstra versions</h2>
+  <table class="nt"><tr><th>Version</th><th>Time</th><th>Space</th><th>Better for</th></tr>
+  <tr><td>Array: scan all nodes for the minimum</td><td>O(V²)</td><td>O(V)</td><td>Dense graphs (E ≈ V²)</td></tr>
+  <tr><td>Min-heap (priority queue)</td><td>O((V+E) log V)</td><td>O(V+E)</td><td>Sparse graphs (E ≈ V)</td></tr></table>
+  <p>Array: each of V rounds scans V nodes. Heap: each edge costs at most one O(log V) push. When E ≈ V² the heap term becomes V² log V, which is no better than the array.</p>
+  <h3>Watch both versions work</h3>
+  <div class="tool">Animation speed <input id="nspd" type="range" min=".25" max="4" step=".25" value="1"><b id="nsv">1×</b><button id="rSp" class="on">Sparse graph</button><button id="rDe">Dense graph</button></div>
+  <svg id="vRace" viewBox="0 0 600 230" role="img" aria-label="Array versus heap race"></svg><div id="vRace-ctl" class="tool"></div>
+  <p>Each row settles the same 20 nodes. The bar counts basic operations (scans, heap moves, edge checks).</p>
+  <div class="tool"><button id="nrunA">▶ Run my experiment (V = 1500)</button><span>random graphs, timed live in your browser</span></div>
+  <div id="resA"></div>
+  <h3>Why Dijkstra fails with negative edges</h3>
+  <p>Dijkstra is greedy: once a node is settled its distance is treated as final, because every other route must pass through nodes that are at least as far. A negative edge breaks this: a longer route can become shorter later, but the node is already closed. <b class="k">Bellman-Ford</b> fixes this by relaxing every edge V−1 times (O(V·E)), and one extra round detects a negative cycle.</p>
+  <div id="negA"></div>
+  <svg id="vNeg" viewBox="0 0 600 250" role="img" aria-label="Dijkstra versus Bellman-Ford"></svg><div id="vNeg-ctl" class="tool"></div></div>
+ <div class="card"><h2>Set B · Self-learning · Graham vs Jarvis vs Andrew</h2>
+  <table class="nt"><tr><th></th><th>Graham Scan</th><th>Jarvis March</th><th>Andrew’s monotone chain</th></tr>
+  <tr><td>Idea</td><td>Sort by angle around the anchor; stack pops right turns</td><td>Wrap a gift: from the leftmost point keep picking the most clockwise point</td><td>Sort by x, y; build lower and upper hull with a stack</td></tr>
+  <tr><td>Time</td><td>O(n log n)</td><td>O(n·h)</td><td>O(n log n)</td></tr>
+  <tr><td>Collinear points</td><td>Pop on ≤ 0 drops them; sort needs a distance tie-break</td><td>Take the farthest of the collinear candidates</td><td>Pop on ≤ 0 drops them; no angles needed</td></tr>
+  <tr><td>Best / worst</td><td>Both O(n log n) (sort)</td><td>Best O(n) when h is tiny; worst O(n²) when h = n</td><td>Both O(n log n) (sort)</td></tr></table>
+  <h3>See each algorithm work</h3>
+  <div class="tool"><button data-alg="gra" class="on">Graham</button><button data-alg="jar">Jarvis</button><button data-alg="and">Andrew</button><button id="hNew">New points</button><button id="hSam">Sample</button><button id="hCol">Collinear</button></div>
+  <svg id="vHull" viewBox="0 0 600 380" role="img" aria-label="Convex hull animation"></svg><div id="vHull-ctl" class="tool"></div>
+  <div id="vHullN" class="res" style="min-height:48px"></div><p id="vHullC"></p>
+  <div class="tool"><button id="nB1">Random points (small h)</button><button id="nB2">Points on a circle (h ≈ n)</button><button id="nB3">All points collinear</button></div>
+  <div id="resB"><p>Pick an experiment: all three algorithms run on the same points and count cross-product tests.</p></div></div>
+</section>
+<div class="bar">
+ <button id="first" title="Reset">⏮</button><button id="prev" title="Back (←)">◀</button>
+ <button id="play" title="Space">▶ Play</button><button id="next" title="Forward (→)">▶▶</button>
+ <input id="bar" type="range" min="0" value="0" aria-label="Step">
+ <label>Speed <input id="spd" type="range" min=".25" max="4" step=".25" value="1"><b id="sv">1×</b></label>
+ <span id="cnt" style="color:var(--mute);font-size:13px"></span>
+</div>
+
+<script id="logic">
+function dijkstraSteps(n,E,src,blk){
+ const adj=Array.from({length:n},()=>[]);
+ E.forEach(([u,v,w],k)=>{if(blk.has(k))return;adj[u].push([v,w]);adj[v].push([u,w])});
+ const INF=Infinity,S=[];let dist=Array(n).fill(INF),par=Array(n).fill(-1),done=Array(n).fill(false),pq=[];
+ const sn=(line,desc,x={})=>S.push({line,desc,dist:[...dist],par:[...par],done:[...done],pq:pq.map(q=>[...q]).sort((a,b)=>a[0]-b[0]),cur:-1,edge:null,...x});
+ sn(0,'Every distance starts at ∞ and every parent at −1 (unknown).');
+ dist[src]=0;sn(1,`The source (${src}) is 0 minutes from itself.`);
+ pq.push([0,src]);sn(2,'The queue starts with (0, source).');
+ while(pq.length){
+  sn(3,`Queue holds ${pq.length} entr${pq.length>1?'ies':'y'} → keep going.`);
+  pq.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const [d,u]=pq.shift();
+  sn(4,`Pop the smallest entry: (${d}, node ${u}).`,{cur:u});
+  if(d>dist[u]){sn(5,`${d} > dist[${u}] = ${dist[u]} → stale entry, skip it.`,{cur:u});continue}
+  done[u]=true;sn(5,`${d} = dist[${u}] → fresh. Node ${u} is now final (settled).`,{cur:u});
+  for(const [v,w] of adj[u]){
+   const ed={cur:u,edge:[u,v]};
+   sn(6,`Look at road ${u}–${v} (${w} min).`,ed);
+   if(d+w<dist[v]){
+    sn(7,`${d} + ${w} = ${d+w} < ${dist[v]===INF?'∞':dist[v]} → a faster route to ${v}!`,ed);
+    dist[v]=d+w;par[v]=u;sn(8,`dist[${v}] = ${d+w}, parent[${v}] = ${u}.`,ed);
+    pq.push([dist[v],v]);sn(9,`Push (${dist[v]}, ${v}) into the queue.`,ed);
+   }else sn(7,`${d} + ${w} = ${d+w} ≥ ${dist[v]} → no improvement.`,ed);
+  }
+ }
+ sn(-1,'Done! Times: '+dist.map((d,v)=>`${v}: ${d===INF?'INF':d}`).join(' · '));
+ return S;
+}
+function grahamSteps(P){
+ const S=[],cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),L=i=>`(${P[i][0]},${P[i][1]})`;
+ let st=[],order=[],an=-1;
+ const sn=(line,desc,x={})=>S.push({line,desc,st:[...st],order:[...order],an,cand:-1,pop:-1,fin:false,...x});
+ if(P.length<3){sn(-1,'Hull not possible: fewer than 3 distinct points.');return S}
+ let a=0;P.forEach((p,i)=>{if(p[1]<P[a][1]||(p[1]===P[a][1]&&p[0]<P[a][0]))a=i});
+ an=a;sn(0,`Anchor = lowest y, then lowest x → ${L(a)}.`);
+ const d2=(i,j)=>(P[i][0]-P[j][0])**2+(P[i][1]-P[j][1])**2;
+ order=P.map((_,i)=>i).filter(i=>i!==a).sort((i,j)=>{const c=cr(P[a],P[i],P[j]);return c?(c>0?-1:1):d2(a,i)-d2(a,j)});
+ sn(1,'Sort the rest by polar angle around the anchor (cross product); ties → nearer first. Numbers show the order.');
+ st=[a];sn(2,'Stack starts with the anchor.');
+ for(const p of order){
+  sn(3,`Next point in order: ${L(p)}.`,{cand:p});
+  while(st.length>=2){
+   const o=st[st.length-2],t=st[st.length-1],c=cr(P[o],P[t],P[p]);
+   if(c<=0){sn(4,`cross(${L(o)}, ${L(t)}, ${L(p)}) = ${c} ≤ 0 → not a left turn.`,{cand:p});
+    st.pop();sn(5,`Pop ${L(t)} — it lies inside the hull.`,{cand:p,pop:t})}
+   else{sn(4,`cross(${L(o)}, ${L(t)}, ${L(p)}) = ${c} > 0 → left turn, keep.`,{cand:p});break}
+  }
+  st.push(p);sn(6,`Push ${L(p)} onto the stack.`,{cand:p});
+ }
+ if(st.length<3){sn(-1,'All points are collinear → only a segment, no proper hull.');return S}
+ let per=0,ar=0;
+ st.forEach((v,k)=>{const w=st[(k+1)%st.length];per+=Math.hypot(P[v][0]-P[w][0],P[v][1]-P[w][1]);ar+=P[v][0]*P[w][1]-P[w][0]*P[v][1]});
+ sn(7,`Hull (CCW): ${st.map(L).join(' ')} · Perimeter ${per.toFixed(2)} · Area ${(Math.abs(ar)/2).toFixed(2)}`,{fin:true});
+ return S;
+}
+function benchSteps(V,E){
+ const adj=Array.from({length:V},()=>[]),R=n=>Math.floor(Math.random()*n),add=(u,v,w)=>{adj[u].push([v,w]);adj[v].push([u,w])};
+ for(let i=1;i<V;i++)add(i,R(i),1+R(100));
+ for(let k=V-1;k<E;k++)add(R(V),R(V),1+R(100));
+ const INF=Infinity;let t0=performance.now();
+ const da=Array(V).fill(INF),dn=Array(V).fill(false);da[0]=0;
+ for(let r=0;r<V;r++){let u=-1;for(let i=0;i<V;i++)if(!dn[i]&&(u<0||da[i]<da[u]))u=i;dn[u]=true;for(const [v,w] of adj[u])if(da[u]+w<da[v])da[v]=da[u]+w}
+ const tA=performance.now()-t0;t0=performance.now();
+ const dh=Array(V).fill(INF),h=[[0,0]];dh[0]=0;
+ const push=x=>{h.push(x);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p][0]<=h[i][0])break;[h[p],h[i]]=[h[i],h[p]];i=p}};
+ const pop=()=>{const top=h[0],last=h.pop();if(h.length){h[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<h.length&&h[l][0]<h[m][0])m=l;if(r<h.length&&h[r][0]<h[m][0])m=r;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return top};
+ while(h.length){const [d,u]=pop();if(d>dh[u])continue;for(const [v,w] of adj[u])if(d+w<dh[v]){dh[v]=d+w;push([dh[v],v])}}
+ const tH=performance.now()-t0,same=da.every((x,i)=>x===dh[i]),f=x=>x.toFixed(x<10?2:1)+' ms';
+ const mk=(line,desc,x={})=>({line,desc,tA,tH,same,showA:false,showH:false,last:false,verdict:'',...x});
+ const win=tA<tH?`Array wins ×${(tH/tA).toFixed(1)}`:`Heap wins ×${(tA/tH).toFixed(1)}`,sparse=E<V*V/8;
+ return[mk(0,`Random connected graph: V = ${V}, E = ${E} (${sparse?'sparse':'dense'}).`),
+ mk(1,'Start the stopwatch for the array version.'),
+ mk(2,`Each of ${V} rounds scans all ${V} nodes → about V² = ${(V*V).toLocaleString()} checks.`),
+ mk(3,`Array version finished in ${f(tA)}.`,{showA:true}),
+ mk(4,'Restart the stopwatch for the heap version.',{showA:true}),
+ mk(5,`Heap pops the minimum in O(log V). Work ≈ (V+E)·log V = ${Math.round((V+E)*Math.log2(V)).toLocaleString()} steps.`,{showA:true}),
+ mk(6,`Heap version finished in ${f(tH)}.`,{showA:true,showH:true}),
+ mk(7,`${same?'Same distances ✓':'MISMATCH ✗'} · ${win}. ${sparse?'Sparse graph → the heap shines.':'Dense graph → E ≈ V², so the gap narrows and the array version is competitive.'}`,{showA:true,showH:true,last:true,verdict:`${win}  (${f(tA)} vs ${f(tH)})`})];
+}
+function negDemo(){
+ const E=[[0,1,4],[0,2,5],[2,1,-3]],n=3,INF=Infinity,d=Array(n).fill(INF),done=Array(n).fill(false);d[0]=0;
+ for(let r=0;r<n;r++){let u=-1;for(let i=0;i<n;i++)if(!done[i]&&d[i]<INF&&(u<0||d[i]<d[u]))u=i;if(u<0)break;done[u]=true;
+  for(const [a,b,w] of E)if(a===u&&!done[b]&&d[u]+w<d[b])d[b]=d[u]+w}
+ const bf=Array(n).fill(INF);bf[0]=0;for(let r=0;r<n-1;r++)for(const [a,b,w] of E)if(bf[a]+w<bf[b])bf[b]=bf[a]+w;
+ return{dij:d,bf};
+}
+function hullAlgos(P){
+ let c=0;const cr=(o,a,b)=>{c++;return(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0])},d2=(a,b)=>(a[0]-b[0])**2+(a[1]-b[1])**2;
+ const an=P.reduce((m,p)=>p[1]<m[1]||(p[1]===m[1]&&p[0]<m[0])?p:m);
+ const rest=P.filter(p=>p!==an).sort((p,q)=>{const k=cr(an,p,q);return k?(k>0?-1:1):d2(an,p)-d2(an,q)});
+ const st=[an];for(const p of rest){while(st.length>=2&&cr(st[st.length-2],st[st.length-1],p)<=0)st.pop();st.push(p)}
+ const g={hull:st,ops:c};
+ c=0;const S=[...P].sort((p,q)=>p[0]-q[0]||p[1]-q[1]),lo=[],up=[];
+ for(const p of S){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+ for(const p of [...S].reverse()){while(up.length>1&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}
+ lo.pop();up.pop();const m={hull:lo.concat(up),ops:c};
+ c=0;const s=S[0],jh=[];let cur=s;
+ do{jh.push(cur);let nx=P[0]===cur?P[1]:P[0];for(const p of P){if(p===cur)continue;const k=cr(cur,nx,p);if(k<0||(k===0&&d2(cur,p)>d2(cur,nx)))nx=p}cur=nx}while(cur!==s&&jh.length<=P.length);
+ const j={hull:jh,ops:c},key=x=>x.map(p=>p+'').sort().join('|');
+ return{g,j,m,agree:key(g.hull)===key(j.hull)&&key(j.hull)===key(m.hull)};
+}
+function raceSteps(V,E){
+ const adj=Array.from({length:V},()=>[]),R=n=>Math.floor(Math.random()*n),add=(u,v,w)=>{adj[u].push([v,w]);adj[v].push([u,w])};
+ for(let i=1;i<V;i++)add(i,R(i),1+R(20));for(let k=V-1;k<E;k++)add(R(V),R(V),1+R(20));
+ const lg=x=>Math.ceil(Math.log2(x+1)),I=Infinity;
+ let dA=Array(V).fill(I),dn=Array(V).fill(false),tot=0;dA[0]=0;const oA=[],cA=[0];
+ for(let r=0;r<V;r++){let u=-1;for(let i=0;i<V;i++)if(!dn[i]&&(u<0||dA[i]<dA[u]))u=i;dn[u]=true;oA.push(u);tot+=V+adj[u].length;
+  for(const [v,w] of adj[u])if(dA[u]+w<dA[v])dA[v]=dA[u]+w;cA.push(tot)}
+ const dH=Array(V).fill(I),dn2=Array(V).fill(false),oH=[],cH=[0];dH[0]=0;tot=0;const h=[[0,0]];
+ while(h.length){h.sort((a,b)=>a[0]-b[0]);const [d,u]=h.shift();tot+=lg(h.length+1);if(d>dH[u]||dn2[u])continue;dn2[u]=true;oH.push(u);tot+=adj[u].length;
+  for(const [v,w] of adj[u])if(d+w<dH[v]){dH[v]=d+w;h.push([dH[v],v]);tot+=lg(h.length)}cH.push(tot)}
+ return Array.from({length:V+1},(_,f)=>({f,V,E,oA:oA.slice(0,f),oH:oH.slice(0,f),a:cA[f],h:cH[f],mx:Math.max(cA[V],cH[V])}));
+}
+function negFrames(){
+ const I=Infinity,D=[
+ {d:[0,I,I],dn:[0,0,0],hot:-1,k:'',n:'Start: dist(A) = 0.'},
+ {d:[0,I,I],dn:[1,0,0],hot:-1,k:'',n:'Settle A (smallest). It is now final.'},
+ {d:[0,4,I],dn:[1,0,0],hot:0,k:'w',n:'Relax A→B: B = 4.'},
+ {d:[0,4,5],dn:[1,0,0],hot:1,k:'w',n:'Relax A→C: C = 5.'},
+ {d:[0,4,5],dn:[1,1,0],hot:-1,k:'',n:'Settle B = 4. Now treated as final.'},
+ {d:[0,4,5],dn:[1,1,1],hot:-1,k:'',n:'Settle C = 5.'},
+ {d:[0,4,5],dn:[1,1,1],hot:2,k:'b',n:'C→B: 5 − 3 = 2 < 4, but B is closed. B = 4 ✗'}],
+ F=[
+ {d:[0,I,I],dn:[0,0,0],hot:-1,k:'',n:'Start: dist(A) = 0, others ∞.'},
+ {d:[0,I,I],dn:[0,0,0],hot:-1,k:'',n:'Round 1: relax EVERY edge.'},
+ {d:[0,4,I],dn:[0,0,0],hot:0,k:'w',n:'A→B: B = 4.'},
+ {d:[0,4,5],dn:[0,0,0],hot:1,k:'w',n:'A→C: C = 5.'},
+ {d:[0,2,5],dn:[0,0,0],hot:2,k:'o',n:'C→B: 5 − 3 = 2 < 4 → B = 2.'},
+ {d:[0,2,5],dn:[0,0,0],hot:-1,k:'',n:'Round 2: nothing improves → stop.'},
+ {d:[0,2,5],dn:[0,0,0],hot:-1,k:'o',n:'B = 2 ✓ (A→C→B). Nodes are never closed.'}];
+ return D.map((x,i)=>({D:x,F:F[i]}));
+}
+function jarvisSteps(P){
+ const S=[],cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),d2=(a,b)=>(a[0]-b[0])**2+(a[1]-b[1])**2,hull=[];let ops=0;
+ const sn=(note,x={})=>S.push({chains:[[...hull]],from:null,cand:null,best:null,pop:null,fin:null,note,ops,...x});
+ if(P.length<3){sn('Need at least 3 distinct points.');return S}
+ const s=P.reduce((m,p)=>p[0]<m[0]||(p[0]===m[0]&&p[1]<m[1])?p:m);let cur=s;
+ sn(`Start at the leftmost point (${s}).`,{from:s});
+ do{hull.push(cur);let nx=P[0]===cur?P[1]:P[0];
+  sn(`Hull point (${cur}). First guess for the next point: (${nx}).`,{from:cur,best:nx});
+  for(const p of P){if(p===cur||p===nx)continue;const k=cr(cur,nx,p);ops++;const bt=k<0||(k===0&&d2(cur,p)>d2(cur,nx));
+   sn(`Test (${p}): cross = ${k} → ${bt?'more clockwise, new best':'keep (' +nx+')'}.`,{from:cur,best:nx,cand:p});if(bt)nx=p}
+  sn(`Nothing is to the right of (${cur})→(${nx}), so (${nx}) joins the hull.`,{from:cur,best:nx});cur=nx}while(cur!==s&&hull.length<=P.length);
+ sn(`Back at the start. ${hull.length} hull points, ${ops} cross tests.`,{chains:[[...hull,s]],fin:[...hull]});
+ return S;
+}
+function andrewSteps(P){
+ const S=[],cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),lo=[],up=[];let ops=0;
+ const sn=(note,x={})=>S.push({chains:[[...lo],[...up]],from:null,cand:null,best:null,pop:null,fin:null,note,ops,...x});
+ if(P.length<3){sn('Need at least 3 distinct points.');return S}
+ const Q=[...P].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);sn('Sort the points left to right (x, then y).');
+ const build=(arr,ch,name)=>{for(const p of arr){sn(`${name} hull: next point (${p}).`,{cand:p,from:ch[ch.length-1]||null});
+  while(ch.length>1){const t=ch[ch.length-1],k=cr(ch[ch.length-2],t,p);ops++;
+   if(k<=0){sn(`cross = ${k} ≤ 0 → pop (${t}).`,{cand:p,from:t,pop:t});ch.pop()}else break}
+  ch.push(p)}};
+ build(Q,lo,'Lower');sn('Lower hull done. Now sweep right to left for the upper hull.');build([...Q].reverse(),up,'Upper');
+ const f=lo.slice(0,-1).concat(up.slice(0,-1));sn(`Join both chains. ${f.length} hull points, ${ops} cross tests.`,{fin:f});
+ return S;
+}
+function grahamViz(P){
+ return grahamSteps(P).map(s=>({chains:[s.st.map(i=>P[i])],from:s.st.length?P[s.st[s.st.length-1]]:null,cand:s.cand>=0?P[s.cand]:null,best:null,pop:s.pop>=0?P[s.pop]:null,fin:s.fin?s.st.map(i=>P[i]):null,note:s.desc}));
+}
+</script>
+
+<script id="ui">
+const $=s=>document.querySelector(s),NS='http://www.w3.org/2000/svg';
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.append(e);return e};
+const NODES=[[70,190,'Hebbal Hub'],[210,80,'Indiranagar'],[210,300,'Koramangala'],[380,80,'MG Road'],[380,300,'Jayanagar'],[530,190,'Electronic City']];
+const EDGES=[[0,1,4],[0,2,8],[1,2,2],[1,3,5],[2,4,10],[3,4,2],[3,5,6],[4,5,3]];
+const SAMPLE=[[0,3],[1,1],[2,2],[4,4],[0,0],[1,2],[3,1],[3,3]];
+const CODE={
+dij:[
+['    dist = [INF] * n; parent = [-1] * n','Two lists: best known time to every place (starts at ∞) and the place we came from (−1 = none).'],
+['    dist[start] = 0','The start is 0 minutes from itself, the only time we are sure of.'],
+['    heap = [(0, start)]','A min-heap of (time, node) pairs. It always gives back the closest unfinished node.'],
+['    while heap:','Keep going while there are places left to check.'],
+['        d, u = heapq.heappop(heap)','Take the closest node. With non-negative times nothing can reach it faster than d.'],
+['        if d > dist[u]: continue','An older, slower entry for u: skip it. Otherwise u is final.'],
+['        for v, w in graph[u]:','Look at every road from u to a neighbour v that takes w minutes.'],
+['            if d + w < dist[v]:','Is going through u faster than the best known way to v?'],
+['                dist[v] = d + w; parent[v] = u','Yes: save the better time and remember u as the previous node (used to print the route).'],
+['                heapq.heappush(heap, (dist[v], v))','Put v in the heap with its new time so it gets processed later.']],
+gra:[
+['anchor = lowest point  # smallest y, then smallest x','The lowest point is always on the hull, so we start there. A short for-loop finds it.'],
+['others.sort()  # (angle, distance, point)','Each point becomes (angle from anchor, distance, point), rounded with math.atan2. Sorting orders by angle, then nearer first. O(n log n).'],
+['stack = [anchor]','The stack holds the hull built so far, in counter-clockwise order.'],
+['for angle, d, p in others:','Go through the points in angle order. Each is pushed once and popped at most once, so this scan is O(n).'],
+['    while len(stack) >= 2 and cross(stack[-2], stack[-1], p) <= 0:','cross > 0 means a left turn (keep). cross ≤ 0 means a right turn or collinear, so the top point is not a corner.'],
+['        stack.pop()','Remove the top point, then test again with the new top.'],
+['    stack.append(p)','p now makes a left turn, so it joins the hull.'],
+['perimeter, area = loop over stack edges (shoelace)','Perimeter = sum of edge lengths with math.dist. Area = ½ |Σ(x₁y₂ − x₂y₁)| (shoelace).']],
+ben:[
+['build a random connected graph  # V nodes, E roads','A random tree makes the graph connected, then random extra roads are added until there are E roads.'],
+['begin = time.time()  # array version','Start the stopwatch.'],
+['u = unfinished node with smallest dist  # loop over all V','No heap: every round loops over all V nodes to find the closest one, so O(V²) in total, whatever E is.'],
+['array_time = time.time() - begin','Stop the stopwatch: time taken by the array version.'],
+['begin = time.time()  # heap version','Restart the stopwatch for the heap version.'],
+['d, u = heapq.heappop(heap)  # O(log V)','The heap gives the smallest in O(log V). Total work is about O((V+E) log V).'],
+['heap_time = time.time() - begin','Stop the stopwatch: time taken by the heap version.'],
+['print(array_time, heap_time, dist == dist2)','Both must give the same distances. Sparse graph: heap wins big. Dense graph: the gap shrinks.']]};
+const hl=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/(#.*$)|\b(for|in|while|if|continue|and|lambda)\b|\b(\d+)\b|\b(heappop|heappush|min|sorted|len|cmp_to_key|cross|append|pop|perf_counter|argmin)\b/g,(m,c,k,n)=>c?`<i class=c>${m}</i>`:k?`<i class=k>${m}</i>`:n?`<i class=n>${m}</i>`:`<i class=f>${m}</i>`);
+
+let mode='dij',steps=[],idx=0,timer=null,playing=false,speed=1,blocked=new Set(),pts=SAMPLE.map(p=>[...p]),E=[],N=[],G={};
+const sx=x=>60+x*60,sy=y=>340-y*40,L=p=>`(${p[0]},${p[1]})`;
+
+function build(){
+ stop();const svg=$('#svg');svg.innerHTML='';
+ $('#code').innerHTML=CODE[mode].map((r,k)=>`<div class="ln"><span class="no">${k+1}</span><div><code>${hl(r[0])}</code><p class="ex">${r[1]}</p></div></div>`).join('');
+ const cells=$('#cells');cells.innerHTML='';
+ if(mode==='dij'){
+  $('#st').textContent='QuickKart road network · Bengaluru';$('#ch').textContent='dist / parent cells · priority queue';
+  steps=dijkstraSteps(6,EDGES,0,blocked);E=[];N=[];
+  EDGES.forEach(([u,v,w],k)=>{const a=NODES[u],b=NODES[v];
+   const ln=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'edge'},svg);
+   const wt=el('text',{x:(a[0]+b[0])/2,y:(a[1]+b[1])/2+4,class:'w'},svg);wt.textContent=w;
+   const ht=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'hit'},svg);
+   ht.addEventListener('click',()=>{blocked.has(k)?blocked.delete(k):blocked.add(k);build()});E.push(ln)});
+  NODES.forEach((p,k)=>{const g=el('g',{class:'node'},svg);el('circle',{cx:p[0],cy:p[1],r:24},g);
+   el('text',{x:p[0],y:p[1],class:'nid'},g).textContent=k;
+   el('text',{x:p[0],y:p[1]+42,class:'nm'},g).textContent=p[2];
+   N.push({g,b:el('text',{x:p[0],y:p[1]-32,class:'bd'},g)});
+   cells.insertAdjacentHTML('beforeend',`<div class="cell"><small>${k} ${p[2]}</small><b>∞</b><small>parent −1</small></div>`)});
+ }else if(mode==='gra'){
+  $('#st').textContent='Smart-city sensors · convex hull (grid 0–8 km)';$('#ch').textContent='sorted order · stack';
+  steps=grahamSteps(pts);G={};
+  for(let x=0;x<=8;x++)for(let y=0;y<=8;y++)el('circle',{cx:sx(x),cy:sy(y),r:2,class:'gd'},svg);
+  G.poly=el('path',{class:'poly',opacity:0},svg);
+  G.L=pts.map(()=>el('line',{class:'hl',opacity:0},svg));G.c=el('line',{class:'cl',opacity:0},svg);
+  G.P=pts.map((p,i)=>{const g=el('g',{class:'pt'},svg);el('circle',{cx:sx(p[0]),cy:sy(p[1]),r:9},g);
+   el('text',{x:sx(p[0]),y:sy(p[1])+25,},g).textContent=L(p);
+   return{g,o:el('text',{x:sx(p[0]),y:sy(p[1])-14,class:'ord'},g)}});
+ }else benBuild(cells);
+ idx=0;$('#bar').max=Math.max(steps.length-1,0);render();
+}
+
+function render(){
+ const s=steps[idx];
+ [...$('#code').children].forEach((r,k)=>r.classList.toggle('on',k===s.line));
+ const on=$('#code').children[s.line];if(on){const c=$('#code');c.scrollTop=on.offsetTop-c.clientHeight/2+on.offsetHeight/2}
+ $('#desc').innerHTML=s.desc;$('#bar').value=idx;$('#cnt').textContent=`Step ${idx+1} / ${steps.length}`;
+ const chips=$('#chips');
+ if(mode==='dij'){
+  EDGES.forEach(([u,v],k)=>{const hot=s.edge&&((s.edge[0]===u&&s.edge[1]===v)||(s.edge[0]===v&&s.edge[1]===u));
+   const tree=s.done[u]&&s.done[v]&&(s.par[v]===u||s.par[u]===v);
+   E[k].setAttribute('class','edge'+(blocked.has(k)?' blk':'')+(hot?' hot':'')+(tree?' tree':''))});
+  const inq=new Set(s.pq.map(q=>q[1]));
+  N.forEach((n,k)=>{n.g.setAttribute('class','node'+(s.cur===k?' cur':'')+(s.done[k]?' done':'')+(inq.has(k)&&!s.done[k]?' fr':''));
+   n.b.textContent=s.dist[k]===Infinity?'∞':s.dist[k]});
+  [...$('#cells').children].forEach((c,k)=>{c.className='cell'+(s.cur===k?' cur':'')+(s.done[k]?' done':'');
+   c.children[1].textContent=s.dist[k]===Infinity?'∞':s.dist[k];c.children[2].textContent='parent '+s.par[k]});
+  chips.innerHTML='<em>queue</em>'+(s.pq.map((q,k)=>`<span class="${k?'':'top'}">(${q[0]},${q[1]})</span>`).join('')||'<em>empty</em>');
+ }else if(mode==='gra'){
+  const ST=new Set(s.st),n=pts.length;
+  G.P.forEach((p,i)=>{p.g.setAttribute('class','pt'+(ST.has(i)?' st':'')+(s.an===i?' an':'')+(s.cand===i?' cd':'')+(s.pop===i?' pp':''));
+   const r=s.order.indexOf(i);p.o.textContent=r>=0?r+1:''});
+  G.L.forEach((l,k)=>{if(k>=1&&k<s.st.length){const a=pts[s.st[k-1]],b=pts[s.st[k]];
+   l.setAttribute('x1',sx(a[0]));l.setAttribute('y1',sy(a[1]));l.setAttribute('x2',sx(b[0]));l.setAttribute('y2',sy(b[1]));l.setAttribute('opacity',1)}else l.setAttribute('opacity',0)});
+  if(s.cand>=0&&s.st.length){const a=pts[s.st[s.st.length-1]],b=pts[s.cand];
+   ['x1','y1','x2','y2'].forEach((q,k)=>G.c.setAttribute(q,k%2?sy([a,a,b,b][k][1]):sx([a,a,b,b][k][0])));G.c.setAttribute('opacity',1)}else G.c.setAttribute('opacity',0);
+  G.poly.setAttribute('d',s.fin?'M'+s.st.map(v=>sx(pts[v][0])+','+sy(pts[v][1])).join('L')+'Z':'');
+  G.poly.setAttribute('opacity',s.fin?1:0);
+  $('#cells').innerHTML=s.order.map((v,k)=>`<div class="cell${s.cand===v?' cur':''}"><small>#${k+1}</small><b>${L(pts[v])}</b></div>`).join('')||'<small style="color:var(--mute)">Sorted order appears after step 2</small>';
+  chips.innerHTML='<em>stack</em>'+s.st.map((v,k)=>`<span class="${k===s.st.length-1?'top':''}">${L(pts[v])}</span>`).join('');
+ }else benRender(s,chips);
+}
+
+let BV=1000,BE=2000,BD=false;
+function benBuild(cells){
+ $('#st').textContent='Self-learning · array O(V²) vs min-heap O((V+E) log V) · live in your browser';$('#ch').textContent='graph size · operation counts';
+ const svg=$('#svg');steps=benchSteps(BV,BE);G={};
+ [['a','Array version · O(V²)',110,'--acc2'],['h','Min-heap version · O((V+E) log V)',250,'--acc']].forEach(([k,t,y,c])=>{
+  el('text',{x:40,y:y-14,class:'nm',style:'text-anchor:start;font-size:14px'},svg).textContent=t;
+  el('rect',{x:40,y,width:520,height:34,rx:10,style:'fill:var(--bg2)'},svg);
+  G[k]=el('rect',{x:40,y,width:0,height:34,rx:10,style:`fill:var(${c});transition:width calc(var(--t)*2.5) cubic-bezier(.2,.8,.2,1)`},svg);
+  G[k+'t']=el('text',{x:48,y:y+22,opacity:0,style:'fill:var(--ink);font:700 14px ui-monospace,monospace;transition:opacity var(--t)'},svg)});
+ G.s=el('text',{x:300,y:345,class:'nm',style:'font-size:15px'},svg);
+ const c=(a,b)=>`<div class="cell"><small>${a}</small><b>${b}</b></div>`;
+ cells.innerHTML=c('nodes V',BV)+c('edges E',BE.toLocaleString())+c('array ≈ V²',(BV*BV).toExponential(1))+c('heap ≈ (V+E)·logV',((BV+BE)*Math.log2(BV)).toExponential(1));
+}
+function benRender(s,chips){
+ const mx=Math.max(s.tA,s.tH,1e-6);
+ [['a',s.showA,s.tA],['h',s.showH,s.tH]].forEach(([k,sh,t])=>{const w=sh?Math.max(6,t/mx*400):0;
+  G[k].setAttribute('width',w);G[k+'t'].setAttribute('x',w+50);G[k+'t'].setAttribute('opacity',sh?1:0);G[k+'t'].textContent=t.toFixed(t<10?2:1)+' ms'});
+ G.s.textContent=s.last?s.verdict:'';
+ chips.innerHTML=`<em>graph</em><span>V=${BV}</span><span>E=${BE.toLocaleString()}</span>`+(s.last?`<span class="top">${s.same?'same distances ✓':'MISMATCH'}</span>`:'');
+}
+function benSet(){BE=BD?Math.floor(BV*BV/4):2*BV;build()}
+
+function go(k){if(mode==='notes')return;idx=Math.max(0,Math.min(steps.length-1,k));render()}
+function setBtn(){$('#play').textContent=playing?'⏸ Pause':'▶ Play'}
+function stop(){clearTimeout(timer);playing=false;setBtn()}
+function tick(){if(idx>=steps.length-1){stop();return}go(idx+1);timer=setTimeout(tick,1000/speed)}
+function play(){if(playing){stop();return}if(idx>=steps.length-1)go(0);playing=true;setBtn();timer=setTimeout(tick,600/speed)}
+function setMode(m){mode=m;$('#m-dij').classList.toggle('on',m==='dij');$('#m-gra').classList.toggle('on',m==='gra');$('#m-ben').classList.toggle('on',m==='ben');$('#m-not').classList.toggle('on',m==='notes');
+ const nt=m==='notes';$('#notes').classList.toggle('hide',!nt);$('#main').classList.toggle('hide',nt);document.querySelector('.bar').classList.toggle('hide',nt);
+ if(nt){stop();$('#tdij').classList.add('hide');$('#tgra').classList.add('hide');$('#tben').classList.add('hide');return}
+ $('#tdij').classList.toggle('hide',m!=='dij');$('#tgra').classList.toggle('hide',m!=='gra');$('#tben').classList.toggle('hide',m!=='ben');
+ if(m==='ben')BE=BD?Math.floor(BV*BV/4):2*BV;build()}
+function setExp(x){$('#code').classList.toggle('exp',x);$('#c-exp').classList.toggle('on',x);$('#c-code').classList.toggle('on',!x)}
+function uniq(a){const s=new Set();return a.filter(p=>{const k=p+'';if(s.has(k))return false;s.add(k);return true})}
+
+$('#m-dij').onclick=()=>setMode('dij');$('#m-gra').onclick=()=>setMode('gra');$('#m-ben').onclick=()=>setMode('ben');$('#m-not').onclick=()=>setMode('notes');
+$('#bv').oninput=e=>{$('#bvv').textContent=e.target.value};$('#bv').onchange=e=>{BV=+e.target.value;benSet()};
+$('#bsp').onclick=()=>{BD=false;benSet()};$('#bde').onclick=()=>{BD=true;benSet()};$('#brn').onclick=()=>benSet();
+$('#c-code').onclick=()=>setExp(false);$('#c-exp').onclick=()=>setExp(true);
+$('#play').onclick=play;$('#next').onclick=()=>{stop();go(idx+1)};$('#prev').onclick=()=>{stop();go(idx-1)};$('#first').onclick=()=>{stop();go(0)};
+$('#bar').oninput=e=>{stop();go(+e.target.value)};
+$('#spd').oninput=e=>{speed=+e.target.value;$('#sv').textContent=speed+'×';document.documentElement.style.setProperty('--t',Math.min(700,850/speed)+'ms')};
+$('#unb').onclick=()=>{blocked.clear();build()};
+$('#smp').onclick=()=>{pts=SAMPLE.map(p=>[...p]);build()};
+$('#col').onclick=()=>{pts=[[1,1],[2,2],[3,3],[5,5],[4,4]];build()};
+$('#rnd').onclick=()=>{pts=uniq(Array.from({length:12},()=>[Math.floor(Math.random()*9),Math.floor(Math.random()*9)])).slice(0,10);build()};
+$('#svg').addEventListener('click',e=>{if(mode!=='gra')return;const r=$('#svg').getBoundingClientRect(),
+ gx=Math.round(((e.clientX-r.left)/r.width*600-60)/60),gy=Math.round((340-(e.clientY-r.top)/r.height*380)/40);
+ if(gx<0||gx>8||gy<0||gy>8||pts.some(p=>p[0]===gx&&p[1]===gy)||pts.length>=20)return;pts.push([gx,gy]);build()});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||mode==='notes')return;
+ if(e.code==='Space'){e.preventDefault();play()}else if(e.key==='ArrowRight'){stop();go(idx+1)}else if(e.key==='ArrowLeft'){stop();go(idx-1)}});
+const row=(a)=>'<tr>'+a.map(x=>`<td>${x}</td>`).join('')+'</tr>';
+function negRender(){const r=negDemo(),f=x=>x===Infinity?'∞':x;
+ $('#negA').innerHTML=`<div class="res"><table class="nt"><tr><th>Directed graph</th><th>Dijkstra (settle once)</th><th>Bellman-Ford</th></tr>
+ ${row(['A→B = 4, A→C = 5, C→B = −3',`dist(B) = <b>${f(r.dij[1])}</b> ✗ wrong`,`dist(B) = <b class="g">${f(r.bf[1])}</b> ✓ via A→C→B = 5 − 3`])}</table>
+ <p>Dijkstra closes B at 4 before it ever looks at C, so the cheaper route through the negative edge is missed. A heap with lazy deletion may re-relax a node, but then the greedy guarantee is gone: it can run exponentially long, and loops forever on a negative cycle. That is why the Python code rejects negative weights up front.</p></div>`}
+$('#nrunA').onclick=()=>{const b=$('#nrunA');b.disabled=true;b.textContent='Running…';$('#resA').innerHTML='';
+ setTimeout(()=>{const V=1500,rows=[['Sparse',2*V],['Dense',Math.floor(V*V/4)]].map(([n,E])=>{const s=benchSteps(V,E)[7];return{n,E,tA:s.tA,tH:s.tH,same:s.same}});
+  $('#resA').innerHTML='<div class="res"><table class="nt"><tr><th>Graph</th><th>V</th><th>E</th><th>Array</th><th>Heap</th><th>Faster</th></tr>'+
+   rows.map(r=>row([r.n,V,r.E.toLocaleString(),r.tA.toFixed(1)+' ms',r.tH.toFixed(1)+' ms',r.tA<r.tH?`<b class="g">Array ×${(r.tH/r.tA).toFixed(1)}</b>`:`<b class="g">Heap ×${(r.tA/r.tH).toFixed(1)}</b>`])).join('')+
+   `</table><p>Observation: on the sparse graph the heap does about ${(2*V*Math.log2(V)).toExponential(1)} steps against ${(V*V).toExponential(1)} for the array, so it wins clearly. On the dense graph E ≈ V²/4, so the heap pays a log factor on every edge and the two methods come much closer. ${rows.every(r=>r.same)?'Both versions gave identical distances ✓.':''} Run it again: timings vary a little, the pattern does not.</p></div>`;
+  b.disabled=false;b.textContent='▶ Run my experiment (V = 1500)'},60)};
+function hullExp(name,P){const r=hullAlgos(P),h=r.g.hull.length,pf=x=>x.map(p=>`(${p})`).join(' ');
+ const T=r.g.hull.length<3;
+ $('#resB').innerHTML=`<div class="res"><table class="nt"><tr><th>Case</th><th>n</th><th>h</th><th>Graham tests</th><th>Jarvis tests</th><th>Andrew tests</th><th>Same hull</th></tr>
+ ${row([name,P.length,h,r.g.ops,r.j.ops,r.m.ops,r.agree?'✓':'✗'])}</table>`+
+ (T?`<p><b class="k">Collinear output:</b> Graham ends with the stack ${pf(r.g.hull)}. After sorting, every point lies on one ray from the anchor and tie-breaking puts them nearest-first; each new point has cross = 0 with the top of the stack, so the previous point is popped. Only the anchor and the farthest point survive, a segment with no area. Jarvis and Andrew return the same two endpoints.</p>`
+ :`<p>Observation: Jarvis needs about n·h = ${P.length*h} tests, while Graham and Andrew stay near n log n ≈ ${Math.round(P.length*Math.log2(P.length))}. ${h>P.length/3?'With h close to n, Jarvis degrades toward O(n²).':'With a small h, Jarvis is competitive and can even win.'}</p>`)+'</div>'}
+const uq=a=>{const s=new Set();return a.filter(p=>!s.has(p+'')&&s.add(p+''))};
+$('#nB1').onclick=()=>hullExp('Random',uq(Array.from({length:300},()=>[Math.floor(Math.random()*1000),Math.floor(Math.random()*1000)])));
+$('#nB2').onclick=()=>hullExp('Circle',uq(Array.from({length:300},(_,i)=>[Math.round(500+500*Math.cos(i*2*Math.PI/300)),Math.round(500+500*Math.sin(i*2*Math.PI/300))])));
+$('#nB3').onclick=()=>hullExp('Collinear',[[1,1],[2,2],[3,3],[5,5],[4,4]]);
+// ===== Self-learning visuals =====
+let ASP=1;const VZ={};
+const ctl=id=>`<button data-v="${id}" data-a="first">⏮</button><button data-v="${id}" data-a="prev">◀</button><button data-v="${id}" data-a="play" id="${id}-p">▶ Animate</button><button data-v="${id}" data-a="next">▶▶</button><span id="${id}-c" style="color:var(--mute)"></span>`;
+['vRace','vNeg','vHull'].forEach(id=>$('#'+id+'-ctl').innerHTML=ctl(id));
+function vset(id,steps,render){if(VZ[id])clearTimeout(VZ[id].t);VZ[id]={steps,i:0,t:null,render};vshow(id);$('#'+id+'-p').textContent='▶ Animate'}
+function vshow(id){const v=VZ[id];v.render(v.steps[v.i]);$('#'+id+'-c').textContent=`${v.i+1} / ${v.steps.length}`}
+function vstop(id){const v=VZ[id];clearTimeout(v.t);v.t=null;$('#'+id+'-p').textContent='▶ Animate'}
+function vplay(id){const v=VZ[id];if(v.t){vstop(id);return}if(v.i>=v.steps.length-1)v.i=0;$('#'+id+'-p').textContent='⏸ Pause';
+ const tick=()=>{vshow(id);if(v.i>=v.steps.length-1){vstop(id);return}v.i++;v.t=setTimeout(tick,(id==='vRace'?260:900)/ASP)};tick()}
+function vstep(id,d){const v=VZ[id];vstop(id);v.i=Math.max(0,Math.min(v.steps.length-1,d===0?0:v.i+d));vshow(id)}
+$('#notes').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;const id=b.dataset.v,a=b.dataset.a;
+ if(a==='play')vplay(id);else vstep(id,a==='next'?1:a==='prev'?-1:0)});
+$('#nspd').oninput=e=>{ASP=+e.target.value;$('#nsv').textContent=ASP+'×'};
+
+// 1) race: array vs heap
+let RD=false;
+function raceBuild(){const V=20,fr=raceSteps(V,RD?100:40),svg=$('#vRace');let o='';
+ [['Array version · scans all V nodes every round',18],['Min-heap version · pops the minimum in O(log V)',124]].forEach(([t,y],r)=>{
+  o+=`<text x="20" y="${y}" class="rl">${t}</text>`;
+  for(let k=0;k<V;k++)o+=`<rect id="rc${r}-${k}" class="rc" x="${20+k*28}" y="${y+10}" width="26" height="26" rx="6"/><text id="rt${r}-${k}" class="rt" x="${33+k*28}" y="${y+27}"></text>`;
+  o+=`<rect x="20" y="${y+46}" width="560" height="16" rx="8" style="fill:var(--bg2)"/><rect id="rb${r}" class="rb" x="20" y="${y+46}" width="0" height="16" rx="8" style="fill:var(${r?'--acc':'--acc2'})"/><text id="ro${r}" class="rl" x="20" y="${y+82}"></text>`});
+ svg.innerHTML=o;
+ vset('vRace',fr,s=>{[[s.oA,s.a],[s.oH,s.h]].forEach(([ord,ops],r)=>{for(let k=0;k<V;k++){const c=$('#rc'+r+'-'+k),t=$('#rt'+r+'-'+k);
+   c.setAttribute('class','rc'+(k<ord.length?(k===ord.length-1?' c':' d'):''));t.textContent=k<ord.length?ord[k]:''}
+   $('#rb'+r).setAttribute('width',Math.max(0,ops/s.mx*560));$('#ro'+r).textContent=`${ops.toLocaleString()} operations · ${s.f}/${V} nodes settled`})})}
+$('#rSp').onclick=()=>{RD=false;$('#rSp').classList.add('on');$('#rDe').classList.remove('on');raceBuild()};
+$('#rDe').onclick=()=>{RD=true;$('#rDe').classList.add('on');$('#rSp').classList.remove('on');raceBuild()};
+
+// 2) negative edge: Dijkstra vs Bellman-Ford
+const NP=[[40,125],[240,45],[240,205]],NE=[[0,1,4],[0,2,5],[2,1,-3]],NN=['A','B','C'];
+function negDraw(s,ox,title,col){let o=`<text x="${ox+150}" y="20" class="rl" style="text-anchor:middle;fill:${col}">${title}</text>`;
+ NE.forEach(([u,v,w],k)=>{const a=NP[u],b=NP[v],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L;
+  o+=`<line class="ne ${s.hot===k?s.k:''}" x1="${ox+a[0]+ux*24}" y1="${a[1]+uy*24}" x2="${ox+b[0]-ux*30}" y2="${b[1]-uy*30}" marker-end="url(#ar)"/><text class="w" x="${ox+(a[0]+b[0])/2-(k===2?14:0)}" y="${(a[1]+b[1])/2+(k===0?-8:k===1?18:4)}">${w}</text>`});
+ NP.forEach(([x,y],i)=>{o+=`<g class="node ${s.dn[i]?'done':''}"><circle cx="${ox+x}" cy="${y}" r="22"/><text class="nid" x="${ox+x}" y="${y}">${NN[i]}</text></g><text class="bd" x="${ox+x}" y="${y-30}">${s.d[i]===Infinity?'∞':s.d[i]}</text>`});
+ return o}
+$('#vNeg').innerHTML='';
+vset('vNeg',negFrames(),f=>{$('#vNeg').innerHTML='<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--mute)"/></marker></defs>'+negDraw(f.D,0,'Dijkstra (settle once)','var(--warn)')+negDraw(f.F,300,'Bellman-Ford (relax all edges)','var(--ok)')+
+ `<text x="150" y="245" class="nm" style="font-size:12px">${f.D.n}</text><text x="450" y="245" class="nm" style="font-size:12px">${f.F.n}</text>`});
+
+// 3) convex hull: Graham / Jarvis / Andrew
+let HP=SAMPLE.map(p=>[...p]),HA='gra';
+function hullBuild(){const A={gra:grahamViz,jar:jarvisSteps,and:andrewSteps}[HA],r=hullAlgos(HP);
+ vset('vHull',A(HP),s=>{const X=x=>60+x*60,Y=y=>340-y*40,q=p=>X(p[0])+','+Y(p[1]),k=p=>p+'';let o='';
+  for(let x=0;x<=8;x++)for(let y=0;y<=8;y++)o+=`<circle cx="${X(x)}" cy="${Y(y)}" r="2" class="gd"/>`;
+  if(s.fin)o+=`<path class="poly" style="opacity:1" d="M${s.fin.map(q).join('L')}Z"/>`;
+  const on=new Set();s.chains.forEach((c,i)=>{c.forEach(p=>on.add(k(p)));if(c.length>1)o+=`<path class="chain c${i}" d="M${c.map(q).join('L')}"/>`});
+  if(s.from&&s.cand)o+=`<line class="cl" x1="${X(s.from[0])}" y1="${Y(s.from[1])}" x2="${X(s.cand[0])}" y2="${Y(s.cand[1])}"/>`;
+  if(s.from&&s.best)o+=`<line class="best" x1="${X(s.from[0])}" y1="${Y(s.from[1])}" x2="${X(s.best[0])}" y2="${Y(s.best[1])}"/>`;
+  HP.forEach(p=>{const c=s.pop&&k(p)===k(s.pop)?'pp':s.cand&&k(p)===k(s.cand)?'cd':s.best&&k(p)===k(s.best)?'cd':on.has(k(p))?'st':'';
+   o+=`<g class="pt ${c}"><circle cx="${X(p[0])}" cy="${Y(p[1])}" r="9"/><text x="${X(p[0])}" y="${Y(p[1])+25}">${p}</text></g>`});
+  $('#vHull').innerHTML=o;$('#vHullN').innerHTML=s.note});
+ $('#vHullC').textContent=`Cross-product tests on these ${HP.length} points → Graham ${r.g.ops} · Jarvis ${r.j.ops} · Andrew ${r.m.ops} · hull size ${r.g.hull.length}`}
+document.querySelectorAll('[data-alg]').forEach(b=>b.onclick=()=>{HA=b.dataset.alg;document.querySelectorAll('[data-alg]').forEach(x=>x.classList.toggle('on',x===b));hullBuild()});
+$('#hNew').onclick=()=>{HP=uq(Array.from({length:14},()=>[Math.floor(Math.random()*9),Math.floor(Math.random()*9)])).slice(0,12);hullBuild()};
+$('#hSam').onclick=()=>{HP=SAMPLE.map(p=>[...p]);hullBuild()};
+$('#hCol').onclick=()=>{HP=[[1,1],[2,2],[3,3],[5,5],[4,4]];hullBuild()};
+raceBuild();hullBuild();
+negRender();
+build();
+</script></body></html>
