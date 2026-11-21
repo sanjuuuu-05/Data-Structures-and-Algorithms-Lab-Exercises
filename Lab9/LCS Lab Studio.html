@@ -1,0 +1,925 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>LCS Lab Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout concept: observatory console. A living aurora/starfield behind frosted glass panels;
+   one accent hue (--h) drifts with the algorithm phase (idle indigo, compute cyan, match gold, traceback magenta, done green). */
+:root{
+  --h:235;
+  --accent:hsl(var(--h) 92% 66%);
+  --accent-soft:hsl(var(--h) 92% 66% / .18);
+  --ink:#04050d;
+  --panel:rgba(14,17,38,.58);
+  --panel-2:rgba(24,29,62,.55);
+  --line:rgba(160,175,255,.16);
+  --text:#eaedff;
+  --muted:#9aa3d1;
+  --gold:#ffd25e; --magenta:#ff5fc8; --cyan:#4fe3ff; --green:#5dffb0; --red:#ff6b82;
+  --dur:460ms;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --display:'Unbounded','Manrope',system-ui,sans-serif;
+  --body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--text);font:15px/1.55 var(--body);
+  padding-block:0 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  min-height:100vh;overflow-x:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-2;display:block}
+.vignette{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%,transparent 40%,rgba(2,3,10,.72) 100%)}
+.wrap{max-width:1240px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin:0 -8px;padding:12px 8px;
+  backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  background:linear-gradient(180deg,rgba(4,5,13,.78),rgba(4,5,13,.35));border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:rgba(4,5,13,.85)}
+.bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+  background:conic-gradient(from 210deg,hsl(var(--h) 95% 60%),hsl(calc(var(--h) + 70) 95% 62%),hsl(calc(var(--h) - 60) 95% 60%),hsl(var(--h) 95% 60%));
+  box-shadow:0 0 28px hsl(var(--h) 95% 60% / .55);animation:spin 14s linear infinite}
+.logo i{width:30px;height:30px;border-radius:9px;background:#080a1c;display:grid;place-items:center;animation:spin 14s linear infinite reverse;
+  font:700 13px var(--mono);color:var(--accent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand h1{font:700 17px/1.1 var(--display);margin:0;letter-spacing:.02em}
+.brand small{display:block;color:var(--muted);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+nav.tabs{position:relative;display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);overflow-x:auto;max-width:100%}
+nav.tabs button{position:relative;z-index:1;border:0;background:none;padding:8px 16px;border-radius:999px;color:var(--muted);font-weight:600;font-size:13.5px;white-space:nowrap;transition:color .3s}
+nav.tabs button[aria-selected=true]{color:#fff}
+#pill{position:absolute;z-index:0;top:5px;bottom:5px;left:0;border-radius:999px;background:linear-gradient(135deg,hsl(var(--h) 80% 45% / .9),hsl(calc(var(--h) + 50) 80% 42% / .9));
+  box-shadow:0 4px 22px hsl(var(--h) 90% 55% / .45);transition:transform .55s var(--ease),width .55s var(--ease),background .6s}
+
+main{padding-top:26px}
+section.panel{display:none}
+section.panel.active{display:block;animation:enter .7s var(--ease) both}
+@keyframes enter{from{opacity:0;transform:translateY(18px) scale(.985);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+.hero{padding:6px 2px 22px}
+.hero h2{font:700 clamp(22px,3.4vw,38px)/1.12 var(--display);margin:0 0 10px;text-wrap:balance;letter-spacing:-.01em}
+.hero h2 em{font-style:normal;background:linear-gradient(90deg,var(--accent),hsl(calc(var(--h) + 80) 95% 70%));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);max-width:70ch;margin:0}
+
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px;
+  backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);
+  box-shadow:0 20px 60px -20px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);min-width:0}
+.card::after{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;
+  background:linear-gradient(140deg,hsl(var(--h) 90% 65% / .55),transparent 35%,transparent 65%,hsl(calc(var(--h) + 60) 90% 65% / .4));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.7;transition:opacity .4s}
+.card h3{font:600 12px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.card h3::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:18px;align-items:start}
+.stack{display:grid;gap:18px;min-width:0}
+@media(max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+/* inputs */
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:640px){.inputs{grid-template-columns:1fr}}
+label.f{display:grid;gap:5px;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);min-width:0}
+input[type=text],textarea{width:100%;background:rgba(5,7,20,.6);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:10px 12px;font:500 14px var(--mono);transition:border-color .3s,box-shadow .3s,background .3s;resize:vertical}
+input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--muted);transition:all .3s var(--ease)}
+.chip:hover{color:#fff;border-color:var(--accent);transform:translateY(-1px);background:var(--accent-soft)}
+.chip.on{color:#07091a;background:var(--accent);border-color:transparent;box-shadow:0 0 20px var(--accent-soft)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:rgba(255,255,255,.04)}
+.seg button{border:0;background:none;padding:5px 13px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);transition:all .35s var(--ease)}
+.seg button.on{background:var(--accent);color:#07091a}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.lbl{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+
+/* player */
+.ctl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:14px;padding:12px;border-radius:16px;background:rgba(5,7,20,.55);border:1px solid var(--line)}
+.ctl .btns{display:flex;gap:6px}
+.ib{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);display:grid;place-items:center;transition:all .3s var(--ease)}
+.ib:hover{background:var(--accent-soft);border-color:var(--accent);transform:translateY(-2px)}
+.ib:active{transform:scale(.92)}
+.ib svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib.play{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,hsl(var(--h) 90% 55%),hsl(calc(var(--h) + 60) 90% 55%));border:0;box-shadow:0 6px 26px hsl(var(--h) 90% 55% / .55);color:#07091a}
+.ib.play svg{fill:currentColor;stroke:none}
+.ib.play.playing{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 6px 40px hsl(var(--h) 95% 60% / .9);transform:scale(1.06)}}
+.scrubwrap{flex:1 1 180px;min-width:140px;display:grid;gap:4px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(255,255,255,.12) var(--p,0%));outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px var(--accent-soft),0 2px 10px rgba(0,0,0,.5);transition:transform .2s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 4px var(--accent-soft)}
+.counter{font:600 11.5px var(--mono);color:var(--muted)}
+.spd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.spd .chip{padding:4px 9px;font:600 11.5px var(--mono)}
+.spd input[type=range]{width:96px}
+.spd-label{font:700 13px var(--mono);color:var(--accent);min-width:44px;text-align:right}
+.loop{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.loop input{accent-color:var(--accent)}
+
+/* DP grid */
+.gridwrap{overflow-x:auto;padding:6px 4px 12px;border-radius:16px;background:rgba(3,4,14,.35);border:1px solid var(--line)}
+.dp{position:relative;display:grid;margin:8px auto;width:max-content;--cs:50px}
+.dp .c{width:var(--cs);height:var(--cs);display:grid;place-items:center;font:600 calc(var(--cs)*.34) var(--mono);border-radius:calc(var(--cs)*.22);margin:2px;
+  position:relative;color:transparent;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05);
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),opacity .6s var(--ease),filter .6s var(--ease),box-shadow var(--dur),transform var(--dur) var(--ease)}
+.dp .c.f{color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.45)}
+.dp .c.z{color:rgba(255,255,255,.4)}
+.dp .c.m.f{box-shadow:inset 0 0 0 2px var(--gold),0 0 16px rgba(255,210,94,.45)}
+.dp .c.m.f::after{content:"";position:absolute;right:3px;top:2px;width:calc(var(--cs)*.16);height:calc(var(--cs)*.16);border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.dp .c.path.f{box-shadow:inset 0 0 0 2px var(--magenta),0 0 20px rgba(255,95,200,.6);transform:scale(1.04)}
+.dp .c.path.m.f{box-shadow:inset 0 0 0 2.5px var(--gold),0 0 0 2px var(--magenta),0 0 24px rgba(255,95,200,.7)}
+.dp .c.gone{opacity:.1;filter:blur(2px) saturate(0)}
+.dp .c.pop{animation:pop calc(var(--dur) * 1.5) var(--ease)}
+@keyframes pop{0%{transform:scale(1.55);filter:brightness(2.2) saturate(1.6)}100%{transform:none;filter:none}}
+.dp .lab{width:var(--cs);height:var(--cs);display:grid;place-items:center;font:700 calc(var(--cs)*.32) var(--mono);color:var(--muted);margin:2px;transition:color .35s,text-shadow .35s,transform .35s var(--ease);max-width:var(--cs);overflow:hidden}
+.dp .lab.hot{color:#fff;text-shadow:0 0 14px var(--accent);transform:scale(1.18)}
+.dp .lab small{font-size:.5em;opacity:.5;display:block;line-height:1}
+.dp .lab.w{font-size:calc(var(--cs)*.2);word-break:break-all;text-align:center;line-height:1.05}
+.cursor,.dep{position:absolute;left:0;top:0;pointer-events:none;border-radius:calc(var(--cs)*.26);z-index:3;
+  width:calc(var(--cs) + 4px);height:calc(var(--cs) + 4px);margin:0;
+  transition:transform var(--dur) var(--ease),opacity .35s}
+.cursor{margin:0}
+.cursor i{position:absolute;inset:0;border-radius:inherit;border:2.5px solid var(--accent);box-shadow:0 0 0 4px var(--accent-soft),0 0 26px var(--accent),inset 0 0 18px var(--accent-soft);animation:pulse 1.15s ease-in-out infinite}
+.cursor b{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);font:700 9.5px var(--mono);padding:1px 7px;border-radius:99px;background:var(--accent);color:#07091a;white-space:nowrap;letter-spacing:.06em}
+@keyframes pulse{50%{transform:scale(1.1);opacity:.78}}
+.dep{opacity:0;border:2px dashed;display:grid;place-items:center;font:700 calc(var(--cs)*.3) var(--mono)}
+.dep::after{content:attr(data-a);position:absolute;display:grid;place-items:center;width:calc(var(--cs)*.42);height:calc(var(--cs)*.42);border-radius:50%;
+  background:var(--dc);color:#07091a;font:800 calc(var(--cs)*.3)/1 var(--mono);box-shadow:0 0 12px var(--dc);z-index:4}
+.dep.d::after{left:calc(var(--cs)*-.14);top:calc(var(--cs)*-.14)}
+.dep.u::after{left:50%;top:calc(var(--cs)*-.2);margin-left:calc(var(--cs)*-.21)}
+.dep.l::after{left:calc(var(--cs)*-.2);top:50%;margin-top:calc(var(--cs)*-.21)}
+.dep.show{opacity:.95}
+.dep.dim{opacity:.4}
+.dep.d{--dc:var(--gold);border-color:var(--gold);color:var(--gold)}
+.dep.u{--dc:var(--cyan);border-color:var(--cyan);color:var(--cyan)}
+.dep.l{--dc:var(--green);border-color:var(--green);color:var(--green)}
+.dep.use{border-style:solid;box-shadow:0 0 22px currentColor,inset 0 0 14px currentColor;animation:glow .9s ease-in-out infinite}
+@keyframes glow{50%{box-shadow:0 0 34px currentColor,inset 0 0 24px currentColor;filter:brightness(1.35)}}
+svg.trace{position:absolute;left:0;top:0;pointer-events:none;z-index:2;overflow:visible}
+svg.trace line{stroke:var(--magenta);stroke-opacity:.8;stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 6px var(--magenta));stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw calc(var(--dur)*1.6) var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+/* explain + code */
+.phase{display:inline-flex;align-items:center;gap:8px;font:700 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:99px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);transition:all .5s}
+.phase::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1s infinite}
+.explain{margin-top:12px;font-size:14.5px;min-height:92px;line-height:1.6}
+.explain code,.k{font:600 13px var(--mono);background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px}
+.explain .g{color:var(--gold)}.explain .c1{color:var(--cyan)}.explain .gr{color:var(--green)}.explain .mg{color:var(--magenta)}
+.code{font:500 12.5px/1.75 var(--mono);display:grid;gap:1px;margin-top:6px}
+.code div{padding:1px 10px;border-radius:8px;color:var(--muted);border-left:3px solid transparent;transition:all .35s var(--ease);white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.code div.on{background:var(--accent-soft);color:#fff;border-left-color:var(--accent);transform:translateX(4px)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{padding:12px;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid var(--line);text-align:center}
+.stat b{display:block;font:700 24px var(--mono);color:var(--accent);font-variant-numeric:tabular-nums;transition:color .5s}
+.stat span{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.lcsout{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;margin-top:12px;align-items:center}
+.tk{padding:5px 10px;border-radius:9px;font:600 13px var(--mono);background:rgba(255,255,255,.06);border:1px solid var(--line);transition:all .5s var(--ease)}
+.tk.lit{background:hsl(var(--c) 80% 40% / .35);border-color:hsl(var(--c) 90% 65%);color:#fff;box-shadow:0 0 16px hsl(var(--c) 90% 60% / .45)}
+.tk.dim{opacity:.38}
+.tk.enter{animation:tkin .6s var(--ease) both}
+@keyframes tkin{from{opacity:0;transform:translateY(10px) scale(.8)}}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.warn{border:1px solid rgba(255,210,94,.4);background:rgba(255,210,94,.08);color:#ffe9aa;border-radius:12px;padding:10px 12px;font-size:13px}
+.mem{display:grid;gap:8px;margin-top:6px}
+.mem .t{display:flex;justify-content:space-between;font:600 12px var(--mono);color:var(--muted)}
+.mem .b{height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.mem .b i{display:block;height:100%;border-radius:inherit;transition:width .9s var(--ease);background:linear-gradient(90deg,var(--cyan),var(--accent))}
+.mem .b.full i{background:linear-gradient(90deg,var(--magenta),var(--gold))}
+
+/* rouge */
+.pairs{display:grid;gap:10px}
+.pair{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1fr) 150px;gap:10px;align-items:start;padding:10px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.03);transition:all .4s var(--ease);cursor:pointer;position:relative}
+.pair:hover{background:rgba(255,255,255,.06)}
+.pair.sel{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 30px var(--accent-soft)}
+.pair.best::before{content:"BEST";position:absolute;top:-9px;right:14px;font:700 10px var(--mono);letter-spacing:.14em;padding:2px 9px;border-radius:99px;background:linear-gradient(90deg,var(--gold),#ff9d5e);color:#2a1700;box-shadow:0 0 16px rgba(255,210,94,.6);animation:tkin .6s var(--ease)}
+.pair .num{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font:700 13px var(--mono);background:rgba(255,255,255,.08)}
+.pair textarea{min-height:50px;font:500 12.5px/1.4 var(--body);padding:8px 10px}
+.pair .res{display:grid;gap:5px;font:600 11.5px var(--mono)}
+.res .r{display:grid;grid-template-columns:14px 1fr 42px;gap:6px;align-items:center}
+.res .bar{height:6px;border-radius:9px;background:rgba(255,255,255,.1);overflow:hidden}
+.res .bar i{display:block;height:100%;border-radius:inherit;transition:width .8s var(--ease),background .8s}
+@media(max-width:760px){.pair{grid-template-columns:30px minmax(0,1fr)}.pair .res{grid-column:1/-1}.pair textarea:nth-of-type(2){grid-column:2}}
+.gauges{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-around}
+.gauge{width:112px;text-align:center}
+.gauge svg{width:112px;height:112px;transform:rotate(-90deg);overflow:visible}
+.gauge circle{fill:none;stroke-width:9;stroke-linecap:round}
+.gauge .bg{stroke:rgba(255,255,255,.1)}
+.gauge .fg{transition:stroke-dashoffset 1.1s var(--ease),stroke .9s;filter:drop-shadow(0 0 7px currentColor)}
+.gauge .v{position:relative;margin-top:-72px;height:34px;font:700 20px var(--mono);font-variant-numeric:tabular-nums}
+.gauge .n{margin-top:38px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.toks{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.formula{font:600 13px/1.8 var(--mono);color:var(--muted)}
+.formula b{color:#fff}
+
+/* self-learning */
+.sec{margin-top:26px}
+.sec>.hd{display:flex;align-items:baseline;gap:14px;margin:0 0 14px;flex-wrap:wrap}
+.sec>.hd .tag{font:700 11px var(--mono);letter-spacing:.14em;color:#07091a;background:var(--accent);padding:3px 10px;border-radius:99px}
+.sec>.hd h2{font:700 clamp(18px,2.4vw,26px)/1.2 var(--display);margin:0}
+.sec p.lead{color:var(--muted);margin:0 0 14px;max-width:80ch}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:900px){.cols3{grid-template-columns:minmax(0,1fr)}}
+.cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:760px){.cols2{grid-template-columns:minmax(0,1fr)}}
+.big{font:700 34px var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+.big small{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.06em}
+.hrow{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0 12px;align-items:flex-end}
+.hc{min-width:34px;height:36px;padding:0 4px;display:grid;place-items:center;border-radius:8px;font:700 14px var(--mono);background:rgba(255,255,255,.06);border:1px solid var(--line);transition:all .5s var(--ease)}
+.hc.out{opacity:.28;filter:saturate(.3)}
+.hc.in{background:rgba(79,227,255,.12);border-color:rgba(79,227,255,.5)}
+.hc.cutL{margin-left:14px;box-shadow:-9px 0 0 -6px var(--magenta)}
+.hc.lit{background:hsl(var(--c) 85% 45% / .5);border-color:hsl(var(--c) 90% 68%);box-shadow:0 0 16px hsl(var(--c) 90% 60% / .6);transform:translateY(-3px)}
+.hc.sub{background:rgba(255,210,94,.25);border-color:var(--gold);box-shadow:0 0 14px rgba(255,210,94,.5)}
+.hc.sb{background:rgba(255,160,60,.25);border-color:#ffa03c}
+.hc.ins{background:rgba(93,255,176,.2);border-color:var(--green)}
+.hc.del{background:rgba(255,107,130,.2);border-color:var(--red);text-decoration:line-through}
+.sbars{display:flex;gap:6px;align-items:flex-end;height:120px;padding-top:18px}
+.sbars .col{flex:1;min-width:22px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
+.sbars .col i{display:block;width:100%;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--cyan),#3563ff);transition:height .8s var(--ease),background .5s,box-shadow .5s;min-height:3px}
+.sbars .col.best i{background:linear-gradient(180deg,var(--gold),var(--magenta));box-shadow:0 0 22px rgba(255,210,94,.7)}
+.sbars .col span{font:600 11px var(--mono);color:var(--muted)}
+.sbars .col em{font:700 11px var(--mono);font-style:normal;color:#fff}
+.stackbox{display:flex;flex-direction:column;gap:5px;max-height:150px;overflow:auto;font:600 12px var(--mono)}
+.stackbox div{padding:4px 9px;border-radius:8px;background:rgba(255,255,255,.05);border-left:3px solid hsl(var(--c) 90% 62%);animation:tkin .5s var(--ease) both;color:var(--muted)}
+.diff{font:500 12.5px/1.7 var(--mono);display:grid;gap:2px}
+.diff div{padding:1px 10px;border-radius:7px;animation:tkin .6s var(--ease) both;white-space:pre-wrap}
+.diff .add{background:rgba(93,255,176,.14);color:#b8ffe0}
+.diff .del{background:rgba(255,107,130,.14);color:#ffc0cb}
+.diff .same{color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font:600 11px var(--mono)}
+.chart .ax{stroke:rgba(255,255,255,.18);stroke-width:1}
+.chart .gl{stroke:rgba(255,255,255,.07)}
+.chart path.ln{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px currentColor)}
+.chart circle{transition:cx .5s var(--ease),cy .5s var(--ease)}
+.qa{display:grid;gap:10px}
+.qa .q{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;transition:border-color .4s,box-shadow .4s}
+.qa .q.open{border-color:var(--accent);box-shadow:0 0 30px var(--accent-soft)}
+.qa .q>button{width:100%;text-align:left;background:none;border:0;padding:14px 16px;font-weight:700;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.qa .q>button span.pl{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center;font:700 16px var(--mono);transition:transform .5s var(--ease),background .4s;flex:none}
+.qa .q.open>button span.pl{transform:rotate(135deg);background:var(--accent);color:#07091a}
+.qa .a{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--ease)}
+.qa .q.open .a{grid-template-rows:1fr}
+.qa .a>div{overflow:hidden;color:var(--muted);padding:0 16px;transition:padding .55s var(--ease)}
+.qa .q.open .a>div{padding:0 16px 16px}
+.mark{font:700 10.5px var(--mono);letter-spacing:.1em;color:var(--accent);margin-right:8px}
+footer{margin-top:40px;text-align:center;color:var(--muted);font-size:12px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);opacity:0;padding:10px 18px;border-radius:99px;background:rgba(10,12,30,.92);border:1px solid var(--accent);color:#fff;font-weight:600;font-size:13px;transition:all .5s var(--ease);z-index:50;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}html{scroll-behavior:auto}}
+</style>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+
+<div class="wrap">
+<header class="top"><div class="bar">
+  <div class="brand"><div class="logo"><i>LCS</i></div><div><h1>LCS Lab Studio</h1><small>Dynamic programming · ROUGE-L · MScAIML</small></div></div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <span id="pill"></span>
+    <button role="tab" data-tab="visualizer" aria-selected="true">Visualizer</button>
+    <button role="tab" data-tab="rouge" aria-selected="false">ROUGE-L Lab</button>
+    <button role="tab" data-tab="learn" aria-selected="false">Self-Learning</button>
+    <button role="tab" data-tab="viva" aria-selected="false">Viva Prep</button>
+  </nav>
+</div></header>
+
+<main>
+<!-- ============ VISUALIZER ============ -->
+<section class="panel active" id="p-visualizer">
+  <div class="hero"><h2>Watch the <em>Longest Common Subsequence</em> build itself, cell by cell.</h2>
+  <p>The glowing frame marks the cell about to act. Dashed rings show the three neighbours it reads. Press play, change the speed, or step through. Tasks 1 and 2 of the lab: the DP table and the traceback.</p></div>
+  <div class="grid2">
+    <div class="card">
+      <h3>DP table L[i][j]</h3>
+      <div class="inputs">
+        <label class="f">Sequence X (rows) <input type="text" id="vx" value="ABCBDAB" autocomplete="off" spellcheck="false"></label>
+        <label class="f">Sequence Y (columns) <input type="text" id="vy" value="BDCABA" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <div class="row">
+        <span class="lbl">Presets</span>
+        <div class="chips" id="vpresets"></div>
+      </div>
+      <div class="row">
+        <span class="lbl">Tokens</span><div class="seg" id="vunit"><button data-v="chars" class="on">Characters</button><button data-v="words">Words</button></div>
+        <span class="lbl">Algorithm</span><div class="seg" id="vmode"><button data-v="full" class="on">Full table + traceback</button><button data-v="two">Two rows</button></div>
+      </div>
+      <div class="gridwrap" id="vgridwrap"><div class="dp" id="vdp"></div></div>
+      <div class="legend">
+        <span><i style="background:linear-gradient(90deg,hsl(215 75% 24%),hsl(365 75% 40%))"></i>value (low → high)</span>
+        <span><i style="background:var(--gold)"></i>match (X[i]=Y[j])</span>
+        <span><i style="border:2px dashed var(--gold)"></i>↖ diagonal</span>
+        <span><i style="border:2px dashed var(--cyan)"></i>↑ up</span>
+        <span><i style="border:2px dashed var(--green)"></i>← left</span>
+        <span><i style="background:var(--magenta)"></i>traceback path</span>
+      </div>
+      <div id="vctl"></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3>What is about to happen</h3>
+        <span class="phase" id="vphase">Ready</span>
+        <div class="explain" id="vexplain"></div>
+      </div>
+      <div class="card">
+        <h3>Pseudocode</h3>
+        <div class="code" id="vcode"></div>
+      </div>
+      <div class="card">
+        <h3>Result</h3>
+        <div class="stats">
+          <div class="stat"><b id="vlen">–</b><span>LCS length</span></div>
+          <div class="stat"><b id="vcells">0</b><span>cells filled</span></div>
+          <div class="stat"><b id="vrow">–</b><span>rows in memory</span></div>
+        </div>
+        <div class="lcsout" id="vlcs"></div>
+        <div id="vrouge" class="formula" style="margin-top:10px"></div>
+        <div class="mem" id="vmem"></div>
+        <div id="vmsg"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROUGE ============ -->
+<section class="panel" id="p-rouge">
+  <div class="hero"><h2>Score summaries with <em>word-level ROUGE-L</em>.</h2>
+  <p>Tasks 3 to 5: precision, recall and F1 from the LCS of lowercase words, a batch of up to 10 pairs, and the edge cases. Edit any text and the scores update live.</p></div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Batch evaluation (K ≤ 10)</h3>
+      <div class="row"><button class="chip" id="addpair">+ Add pair</button><button class="chip" id="resetpairs">Reset examples</button><span class="note" id="kinfo" style="margin:0"></span></div>
+      <div class="pairs" id="pairs"></div>
+      <div class="note">Each row: reference (left), candidate (right). The pair with the highest F1 wears the BEST badge. Ties go to the earliest pair.</div>
+    </div>
+    <div class="stack">
+      <div class="card" id="rdetail">
+        <h3>Selected pair <span id="rsel" style="color:var(--accent);font-family:var(--mono)"></span></h3>
+        <div class="gauges" id="gauges"></div>
+        <div class="formula" id="rformula" style="margin-top:12px"></div>
+        <div class="lbl" style="margin-top:14px">Reference</div><div class="toks" id="rref"></div>
+        <div class="lbl">Candidate</div><div class="toks" id="rcand"></div>
+        <div class="lbl">LCS words</div><div class="toks" id="rlcs"></div>
+        <div class="row" style="margin:0"><button class="chip on" id="openviz">Open in visualizer</button></div>
+      </div>
+      <div class="card"><h3>Correction to the question paper</h3>
+        <div class="warn">Sample Test 2 prints LCS length 4, precision 4/7 and F1 0.615. Its own LCS words, “the cat on the mat”, are 5 words, so the correct output is length 5, precision 5/7 = 0.714, recall 5/6 = 0.833, F1 = 0.769. Pair 1 here shows the corrected values.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SELF LEARNING ============ -->
+<section class="panel" id="p-learn">
+  <div class="hero"><h2>Self-learning: <em>from O(m×n) memory to linear space</em>.</h2>
+  <p>Four questions from the lab sheet, each with something you can run: the two-row version, why it loses the answer, Hirschberg's repair, how LCS differs from its cousins, and where it is used.</p></div>
+
+  <div class="sec" style="margin-top:0"><div class="hd"><span class="tag">Q1</span><h2>Two-row LCS</h2></div>
+    <p class="lead">Cell L[i][j] only reads row i−1 and row i. Keep two rows, swap them after each pass, and make the shorter sequence the columns. Time stays O(m·n); space drops to O(min(m,n)).</p>
+    <div class="cols2">
+      <div class="card"><h3>Memory for long documents</h3>
+        <div class="row"><label class="f" style="flex:1">Words per document <b id="docn" style="color:var(--accent);font:700 14px var(--mono)">3000</b>
+          <input type="range" id="docrng" min="2" max="4" step="0.01" value="3.477"></label></div>
+        <div class="mem" id="docmem"></div>
+        <div class="note">Counting 8 bytes per cell. Dropping from a full table to two rows is the difference between hundreds of megabytes and a few kilobytes.</div>
+      </div>
+      <div class="card"><h3>See it run</h3>
+        <p style="margin:0 0 12px;color:var(--muted)">Open the visualizer in two-row mode. Old rows fade as soon as they are no longer needed, so you can see the length survive and the path disappear.</p>
+        <button class="chip on" id="gotwo">Run two-row mode in visualizer</button>
+        <div class="note" style="margin-top:14px">Verified in the code: two-row length equals the full-table length and a brute-force recursion on 300 random inputs and on a 2000 × 1500 pair.</div>
+      </div></div>
+  </div>
+
+  <div class="sec"><div class="hd"><span class="tag">Q2</span><h2>LCS vs Longest Common Substring vs Edit Distance</h2></div>
+    <p class="lead">Same two strings, three different questions. Change them and watch each answer move.</p>
+    <div class="card">
+      <div class="inputs">
+        <label class="f">String A <input type="text" id="cx" value="kitten" maxlength="14" autocomplete="off" spellcheck="false"></label>
+        <label class="f">String B <input type="text" id="cy" value="sitting" maxlength="14" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <div class="cols3" id="cmp"></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="hd"><span class="tag">Q3</span><h2>Why two rows lose the answer: Hirschberg's fix</h2></div>
+    <p class="lead">Traceback needs the cells it walks through, and the two-row method has overwritten them. Hirschberg's algorithm splits X in the middle, scores both halves against Y with two rows (one forward, one backward), picks the column where the scores add up highest, and recurses on the two sub-problems.</p>
+    <div class="card">
+      <div class="inputs">
+        <label class="f">X <input type="text" id="hx" value="ABCBDAB" autocomplete="off" spellcheck="false"></label>
+        <label class="f">Y <input type="text" id="hy" value="BDCABA" autocomplete="off" spellcheck="false"></label>
+      </div>
+      <div class="lbl">X</div><div class="hrow" id="hxrow"></div>
+      <div class="lbl">Y</div><div class="hrow" id="hyrow"></div>
+      <div class="cols2">
+        <div><div class="lbl">forward[j] + backward[n−j] at the middle of X</div><div class="sbars" id="hbars"></div></div>
+        <div><div class="lbl">Recursion so far</div><div class="stackbox" id="hstack"></div></div>
+      </div>
+      <div class="explain" id="hexplain" style="min-height:48px"></div>
+      <div class="lbl">LCS found (in order)</div><div class="lcsout" id="hout"></div>
+      <div id="hctl"></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="hd"><span class="tag">COMPLEXITY</span><h2>Brute-force recursion vs dynamic programming</h2></div>
+    <p class="lead">Worst case for the plain recursion: two strings of length n with no matching characters. It re-solves the same sub-problems over and over. The DP table solves each of the n² sub-problems once.</p>
+    <div class="grid2">
+      <div class="card"><svg class="chart" id="cplx" viewBox="0 0 640 300" role="img" aria-label="Log-scale chart of recursive calls versus DP cells"></svg></div>
+      <div class="card"><h3>Pick n</h3>
+        <input type="range" id="nrng" min="1" max="22" step="1" value="12">
+        <div class="stats" style="margin-top:14px;grid-template-columns:1fr 1fr">
+          <div class="stat"><b id="nval" style="color:var(--magenta)">–</b><span>recursive calls</span></div>
+          <div class="stat"><b id="dval" style="color:var(--cyan)">–</b><span>DP cells</span></div></div>
+        <div class="note" id="nratio"></div>
+      </div></div>
+  </div>
+
+  <div class="sec"><div class="hd"><span class="tag">Q4</span><h2>Real-world uses</h2></div>
+    <div class="cols3">
+      <div class="card"><h3>Diff tools</h3><p style="margin:0 0 10px;color:var(--muted)">Unchanged lines are the LCS of the two file versions. Everything else is an addition or removal.</p><div class="diff" id="appdiff"></div></div>
+      <div class="card"><h3>Bioinformatics</h3><p style="margin:0 0 10px;color:var(--muted)">The common subsequence of two DNA strands marks conserved regions between species.</p><div class="lbl">Strand 1</div><div class="hrow" id="appd1"></div><div class="lbl">Strand 2</div><div class="hrow" id="appd2"></div><div class="note" id="appdn"></div></div>
+      <div class="card"><h3>Plagiarism checking</h3><p style="margin:0 0 10px;color:var(--muted)">A long shared word sequence signals reuse even when a few words are inserted.</p><div class="toks" id="appp"></div><div class="note" id="appn"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VIVA ============ -->
+<section class="panel" id="p-viva">
+  <div class="hero"><h2>Viva prep: <em>answers you can explain</em>.</h2>
+  <p>Marks: correctness and demonstration 5, self-learning 2, viva 3. Open each question and say the answer in your own words before reading it.</p></div>
+  <div class="qa" id="qa"></div>
+</section>
+</main>
+<footer>Python reference solution, sample outputs and the self-learning note were produced alongside this page.</footer>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+//#CORE-START
+function tokenize(t){return String(t).toLowerCase().replace(/'/g,'').replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean);}
+function lcsTable(X,Y){const m=X.length,n=Y.length,L=Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)L[i][j]=X[i-1]===Y[j-1]?L[i-1][j-1]+1:Math.max(L[i-1][j],L[i][j-1]);return L;}
+function traceback(L,X,Y){let i=X.length,j=Y.length;const path=[],pairs=[];
+  while(i>0&&j>0){if(X[i-1]===Y[j-1]){path.push({i,j,a:'match'});pairs.push([i-1,j-1]);i--;j--;}
+    else if(L[i-1][j]>=L[i][j-1]){path.push({i,j,a:'up'});i--;}else{path.push({i,j,a:'left'});j--;}}
+  pairs.reverse();return{path,pairs,words:pairs.map(p=>X[p[0]])};}
+function rouge(ref,cand){const R=tokenize(ref),C=tokenize(cand),L=lcsTable(R,C),tb=traceback(L,R,C),l=L[R.length][C.length];
+  const p=C.length?l/C.length:0,r=R.length?l/R.length:0,f=l>0?2*p*r/(p+r):0;return{R,C,L,tb,l,p,r,f};}
+function twoRowLen(X,Y){if(Y.length>X.length){const t=X;X=Y;Y=t;}let prev=new Array(Y.length+1).fill(0);
+  for(const x of X){const cur=new Array(Y.length+1).fill(0);for(let j=1;j<=Y.length;j++)cur[j]=x===Y[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);prev=cur;}return prev[prev.length-1];}
+function lastRow(X,Y){let prev=new Array(Y.length+1).fill(0);
+  for(const x of X){const cur=new Array(Y.length+1).fill(0);for(let j=1;j<=Y.length;j++)cur[j]=x===Y[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);prev=cur;}return prev;}
+function hirschEvents(X,Y){const ev=[],out=[];
+  (function rec(xl,xr,yl,yr,d){const xs=X.slice(xl,xr),ys=Y.slice(yl,yr);
+    if(!xs.length||!ys.length){ev.push({t:'empty',xl,xr,yl,yr,d,out:out.slice()});return;}
+    if(xs.length===1){const h=ys.indexOf(xs[0]);if(h>=0)out.push(xs[0]);ev.push({t:'leaf',xl,xr,yl,yr,d,ch:xs[0],hit:h>=0?yl+h:-1,out:out.slice()});return;}
+    const mid=xl+(xs.length>>1),top=lastRow(X.slice(xl,mid),ys),bot=lastRow(X.slice(mid,xr).reverse(),ys.slice().reverse());
+    const sc=top.map((v,j)=>v+bot[ys.length-j]);let sj=0;for(let j=1;j<sc.length;j++)if(sc[j]>sc[sj])sj=j;
+    ev.push({t:'split',xl,xr,yl,yr,d,mid,sc,top,bot,sj,split:yl+sj,out:out.slice()});
+    rec(xl,mid,yl,yl+sj,d+1);rec(mid,xr,yl+sj,yr,d+1);})(0,X.length,0,Y.length,0);
+  return{ev,out};}
+function lcsSubstring(a,b){let best=0,ea=0,eb=0;const m=a.length,n=b.length;let prev=new Array(n+1).fill(0);
+  for(let i=1;i<=m;i++){const cur=new Array(n+1).fill(0);for(let j=1;j<=n;j++)if(a[i-1]===b[j-1]){cur[j]=prev[j-1]+1;if(cur[j]>best){best=cur[j];ea=i;eb=j;}}prev=cur;}
+  return{len:best,a0:ea-best,b0:eb-best};}
+function editOps(a,b){const m=a.length,n=b.length,D=Array.from({length:m+1},(_,i)=>{const r=new Array(n+1).fill(0);r[0]=i;return r;});
+  for(let j=0;j<=n;j++)D[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)D[i][j]=a[i-1]===b[j-1]?D[i-1][j-1]:1+Math.min(D[i-1][j-1],D[i-1][j],D[i][j-1]);
+  let i=m,j=n;const ops=[];
+  while(i>0||j>0){if(i>0&&j>0&&a[i-1]===b[j-1]){ops.push({o:'=',i:i-1,j:j-1});i--;j--;}
+    else if(i>0&&j>0&&D[i][j]===D[i-1][j-1]+1){ops.push({o:'sub',i:i-1,j:j-1});i--;j--;}
+    else if(i>0&&D[i][j]===D[i-1][j]+1){ops.push({o:'del',i:i-1});i--;}
+    else{ops.push({o:'ins',j:j-1});j--;}}
+  return{d:D[m][n],ops:ops.reverse()};}
+function bruteCalls(n){const c=Array.from({length:n+1},()=>new Array(n+1).fill(1));
+  for(let a=1;a<=n;a++)for(let b=1;b<=n;b++)c[a][b]=1+c[a-1][b]+c[a][b-1];return c[n][n];}
+//#CORE-END
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmt=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e4?(n/1e3).toFixed(1)+'K':String(n);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2200);}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+
+/* ---------- global speed + players ---------- */
+const speed={v:+(store('lcs-speed')||1)};const players=[];
+const SPEEDS=[0.25,0.5,1,2,4,8];
+function setSpeed(v){speed.v=v;store('lcs-speed',String(v));document.documentElement.style.setProperty('--dur',Math.max(90,460/v)+'ms');
+  $$('.spd-chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===v));
+  $$('.spd-range').forEach(r=>{r.value=Math.log2(v);paintRange(r);});
+  $$('.spd-label').forEach(l=>l.textContent=(v<1?v:Math.round(v*100)/100)+'×');
+  players.forEach(p=>p.playing&&p.schedule());}
+function paintRange(r){r.style.setProperty('--p',((r.value-r.min)/(r.max-r.min)*100)+'%');}
+const ICON={reset:'<svg viewBox="0 0 24 24"><path d="M6 5v14M19 5l-9 7 9 7z"/></svg>',back:'<svg viewBox="0 0 24 24"><path d="M15 5l-8 7 8 7"/></svg>',
+  fwd:'<svg viewBox="0 0 24 24"><path d="M9 5l8 7-8 7"/></svg>',end:'<svg viewBox="0 0 24 24"><path d="M18 5v14M5 5l9 7-9 7z"/></svg>',
+  play:'<svg viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4.5" height="16" rx="1.4"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.4"/></svg>'};
+class Player{
+  constructor(host,onChange){this.idx=0;this.len=0;this.playing=false;this.onChange=onChange;this.host=host;this.timer=null;
+    host.innerHTML=`<div class="ctl"><div class="btns"><button class="ib" data-a="reset" aria-label="Restart">${ICON.reset}</button><button class="ib" data-a="back" aria-label="Step back">${ICON.back}</button>
+      <button class="ib play" data-a="play" aria-label="Play">${ICON.play}</button><button class="ib" data-a="fwd" aria-label="Step forward">${ICON.fwd}</button><button class="ib" data-a="end" aria-label="Jump to end">${ICON.end}</button></div>
+      <div class="scrubwrap"><input type="range" class="scrub" min="0" max="0" value="0" aria-label="Progress"><span class="counter"></span></div>
+      <div class="spd"><span class="lbl">Speed</span>${SPEEDS.map(s=>`<button class="chip spd-chip" data-v="${s}">${s}×</button>`).join('')}
+      <input type="range" class="spd-range" min="-2" max="3" step="0.05" aria-label="Speed"><span class="spd-label"></span></div>
+      <label class="loop"><input type="checkbox" class="loopcb"> Loop</label></div>`;
+    this.scrub=$('.scrub',host);this.counter=$('.counter',host);this.playBtn=$('[data-a=play]',host);this.loop=$('.loopcb',host);
+    host.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.a){this.act(b.dataset.a);}else if(b.classList.contains('spd-chip'))setSpeed(+b.dataset.v);});
+    this.scrub.addEventListener('input',()=>{this.stop();this.go(+this.scrub.value);});
+    $('.spd-range',host).addEventListener('input',e=>setSpeed(Math.round(Math.pow(2,+e.target.value)*100)/100));
+    players.push(this);}
+  act(a){if(a==='play')this.playing?this.stop():this.play();else{this.stop();if(a==='reset')this.go(0);if(a==='back')this.go(this.idx-1);if(a==='fwd')this.go(this.idx+1);if(a==='end')this.go(this.len);}}
+  setLen(n,keep){this.stop();this.len=n;this.scrub.max=n;this.idx=keep?Math.min(this.idx,n):0;this.update();}
+  go(i){this.idx=clamp(i,0,this.len);this.update();}
+  update(){this.scrub.value=this.idx;paintRange(this.scrub.max>0?(this.scrub.style.setProperty('--p',(this.idx/this.scrub.max*100)+'%'),this.scrub):this.scrub);
+    this.counter.textContent=`step ${this.idx} / ${this.len}`;this.onChange(this.idx);}
+  play(){if(this.idx>=this.len)this.go(0);this.playing=true;this.playBtn.innerHTML=ICON.pause;this.playBtn.classList.add('playing');this.playBtn.setAttribute('aria-label','Pause');this.schedule();}
+  stop(){this.playing=false;clearTimeout(this.timer);this.playBtn.innerHTML=ICON.play;this.playBtn.classList.remove('playing');this.playBtn.setAttribute('aria-label','Play');}
+  schedule(){clearTimeout(this.timer);this.timer=setTimeout(()=>{if(!this.playing)return;
+    if(this.idx<this.len){this.idx++;this.update();this.schedule();}
+    else if(this.loop.checked){this.timer=setTimeout(()=>{if(this.playing){this.go(0);this.schedule();}},900/speed.v);}
+    else this.stop();},720/speed.v);}
+}
+
+/* ---------- aurora + starfield background ---------- */
+const bg=(()=>{const cv=$('#bg'),cx=cv.getContext('2d');let W,H,dpr,stars=[],t0=performance.now(),hueCur=235,hueTarget=235,lastCss=-1;
+  function size(){dpr=Math.min(devicePixelRatio||1,1.5);W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr;
+    stars=Array.from({length:Math.round(innerWidth*innerHeight/9000)},()=>({x:Math.random(),y:Math.random(),z:.2+Math.random()*.8,p:Math.random()*6.28}));}
+  function frame(now){const t=(now-t0)/1000;let dh=((hueTarget-hueCur+540)%360)-180;hueCur=(hueCur+dh*.04+360)%360;
+    if(Math.abs(hueCur-lastCss)>.4){lastCss=hueCur;document.documentElement.style.setProperty('--h',hueCur.toFixed(1));}
+    cx.globalCompositeOperation='source-over';cx.fillStyle='#04050d';cx.fillRect(0,0,W,H);
+    cx.globalCompositeOperation='lighter';
+    const blobs=[[.22,.25,.55,0,.9],[.78,.18,.5,70,.8],[.55,.85,.6,-60,.85],[.9,.7,.4,140,.6],[.1,.8,.45,-120,.6]];
+    blobs.forEach((b,k)=>{const x=(b[0]+Math.sin(t*.11+k*1.7)*.12)*W,y=(b[1]+Math.cos(t*.09+k*2.3)*.12)*H,r=b[2]*Math.max(W,H)*(0.8+.1*Math.sin(t*.2+k));
+      const g=cx.createRadialGradient(x,y,0,x,y,r);const hh=(hueCur+b[3]+360)%360;
+      g.addColorStop(0,`hsla(${hh},90%,52%,${.22*b[4]})`);g.addColorStop(.5,`hsla(${hh},85%,40%,${.08*b[4]})`);g.addColorStop(1,'hsla(0,0%,0%,0)');cx.fillStyle=g;cx.fillRect(0,0,W,H);});
+    // ribbons
+    for(let k=0;k<3;k++){cx.beginPath();for(let x=0;x<=W;x+=24*dpr){const y=H*(.28+k*.22)+Math.sin(x/W*5+t*.35+k*2)*H*.07+Math.sin(x/W*11-t*.5)*H*.02;x?cx.lineTo(x,y):cx.moveTo(x,y);}
+      cx.strokeStyle=`hsla(${(hueCur+k*55)%360},95%,65%,.07)`;cx.lineWidth=46*dpr;cx.lineCap='round';cx.stroke();}
+    stars.forEach(s=>{const tw=.5+.5*Math.sin(t*1.4*s.z+s.p);const x=((s.x+t*.003*s.z)%1)*W,y=s.y*H;
+      cx.fillStyle=`hsla(${(hueCur+30)%360},80%,${75+tw*20}%,${.25+.55*tw*s.z})`;cx.beginPath();cx.arc(x,y,(.6+s.z*1.1)*dpr,0,6.283);cx.fill();});
+    if(!reduce&&!document.hidden)requestAnimationFrame(frame);}
+  size();addEventListener('resize',()=>{size();if(reduce)frame(performance.now());});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!reduce)requestAnimationFrame(frame);});
+  requestAnimationFrame(frame);
+  return{hue(h){hueTarget=h;if(reduce){hueCur=h;frame(performance.now());}}};})();
+const HUE={idle:235,fill:192,match:46,tb:320,done:150};
+
+/* ---------- tabs ---------- */
+const TABS=['visualizer','rouge','learn','viva'];
+function placePill(instant){const b=$('#tabs [aria-selected=true]'),pill=$('#pill');
+  if(instant)pill.style.transition='none';
+  pill.style.width=b.offsetWidth+'px';pill.style.transform=`translateX(${b.offsetLeft}px)`;
+  if(instant){pill.offsetWidth;pill.style.transition='';}
+  try{$('#tabs').scrollTo({left:b.offsetLeft-20,behavior:instant?'auto':'smooth'});}catch(e){}}
+function showTab(name,instant){if(!TABS.includes(name))name='visualizer';
+  $$('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===name));
+  $$('section.panel').forEach(s=>s.classList.toggle('active',s.id==='p-'+name));
+  placePill(instant);
+  players.forEach(p=>p.stop());
+  if(name==='visualizer')setTimeout(()=>vFit(),30);
+  if(name==='rouge')rRender();
+  if(name==='learn'){learnRun();}
+  if(location.hash!=='#'+name)history.replaceState(null,'','#'+name);}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)showTab(b.dataset.tab);});
+addEventListener('hashchange',()=>showTab(location.hash.slice(1)));
+
+/* ================= VISUALIZER ================= */
+const PRESETS=[
+  {n:'Sample 1',x:'ABCBDAB',y:'BDCABA',u:'chars'},
+  {n:'Sample 2 (cat)',x:'the cat sat on the mat',y:'the cat is on the mat today',u:'words'},
+  {n:'DNA',x:'AGGTAB',y:'GXTXAYB',u:'chars'},
+  {n:'Repeated',x:'a a a b b',y:'a b a b a',u:'words'},
+  {n:'Identical',x:'ALGORITHM',y:'ALGORITHM',u:'chars'},
+  {n:'Disjoint',x:'APPLE',y:'ZUMBO',u:'chars'},
+  {n:'Empty X',x:'',y:'HELLO',u:'chars'}];
+const CAP=14;
+const V={mode:'full',unit:'chars',m:0,n:0,X:[],Y:[],L:[],tb:{path:[],pairs:[],words:[]},steps:[],cells:[],xl:[],yl:[],segs:0,truncated:false,F:0};
+const vdp=$('#vdp');
+const CODE=['for i = 1 .. m:','  for j = 1 .. n:','    if X[i] == Y[j]:  L[i][j] = L[i-1][j-1] + 1','    else:             L[i][j] = max(L[i-1][j], L[i][j-1])','traceback from (m, n):','  X[i] == Y[j]  → take it, move ↖','  L[i-1][j] ≥ L[i][j-1] → move ↑','  otherwise → move ←'];
+$('#vcode').innerHTML=CODE.map(c=>`<div>${esc(c)}</div>`).join('');
+$('#vpresets').innerHTML=PRESETS.map((p,i)=>`<button class="chip" data-i="${i}">${esc(p.n)}</button>`).join('');
+const vplayer=new Player($('#vctl'),i=>vPaint(i));
+
+function vTokens(s){return V.unit==='words'?tokenize(s).slice(0,CAP):[...s.replace(/\s+/g,'')].slice(0,CAP);}
+function vBuild(keepIdx){
+  const rawX=$('#vx').value,rawY=$('#vy').value;
+  V.X=vTokens(rawX);V.Y=vTokens(rawY);
+  V.truncated=(V.unit==='words'?tokenize(rawX).length>CAP||tokenize(rawY).length>CAP:rawX.replace(/\s+/g,'').length>CAP||rawY.replace(/\s+/g,'').length>CAP);
+  const {X,Y}=V;V.m=X.length;V.n=Y.length;V.L=lcsTable(X,Y);V.tb=traceback(V.L,X,Y);V.F=V.m*V.n;
+  const steps=[];
+  for(let i=1;i<=V.m;i++)for(let j=1;j<=V.n;j++){const eq=X[i-1]===Y[j-1],a=V.L[i-1][j-1],u=V.L[i-1][j],l=V.L[i][j-1];
+    steps.push({k:'fill',i,j,eq,a,u,l,src:eq?'d':(u>=l?'u':'l'),val:V.L[i][j]});}
+  if(V.mode==='full')V.tb.path.forEach(p=>steps.push({k:'tb',...p}));
+  V.steps=steps;
+  // grid DOM
+  vdp.innerHTML='';vdp.style.gridTemplateColumns=`repeat(${V.n+2},max-content)`;V.cells=[];V.xl=[];V.yl=[];
+  const frag=document.createDocumentFragment();
+  const lab=(txt,cls)=>{const d=document.createElement('div');d.className='lab'+(cls||'');d.textContent=txt;return d;};
+  const wordy=V.unit==='words';
+  for(let r=0;r<V.m+2;r++)for(let c=0;c<V.n+2;c++){
+    if(r===0&&c<2||r<2&&c===0&&r===0){frag.appendChild(lab(''));continue;}
+    if(r===0){const d=lab(Y[c-2],wordy?' w':'');if(c>=2){V.yl[c-1]=d;}frag.appendChild(d);continue;}
+    if(c===0){const d=lab(r>=2?X[r-2]:'',wordy?' w':'');if(r>=2)V.xl[r-1]=d;frag.appendChild(d);continue;}
+    const i=r-1,j=c-1,d=document.createElement('div');d.className='c';(V.cells[i]=V.cells[i]||[])[j]=d;frag.appendChild(d);}
+  vdp.appendChild(frag);
+  // overlay elements
+  const cur=document.createElement('div');cur.className='cursor';cur.innerHTML='<i></i><b></b>';cur.style.opacity=0;
+  const mk=(c,t)=>{const d=document.createElement('div');d.className='dep '+c;d.dataset.a=t;return d;};
+  V.cur=cur;V.deps={d:mk('d','↖'),u:mk('u','↑'),l:mk('l','←')};
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','trace');V.svg=svg;V.segs=0;
+  vdp.append(svg,V.deps.d,V.deps.u,V.deps.l,cur);
+  V.mark=null;vFit();
+  vplayer.setLen(steps.length,keepIdx);
+  $('#vrow').textContent='–';
+}
+function vFit(){const wrap=$('#vgridwrap');if(!wrap.clientWidth)return;const avail=wrap.clientWidth-24;
+  const cs=clamp(Math.floor(avail/(V.n+2))-4,V.unit==='words'?38:30,V.unit==='words'?64:56);vdp.style.setProperty('--cs',cs+'px');
+  svgSize();vPaint(vplayer.idx,true);}
+function svgSize(){const w=vdp.scrollWidth,h=vdp.scrollHeight;V.svg.setAttribute('width',w);V.svg.setAttribute('height',h);V.svg.setAttribute('viewBox',`0 0 ${w} ${h}`);}
+function cellCenter(i,j){const el=V.cells[i][j];return{x:el.offsetLeft+el.offsetWidth/2,y:el.offsetTop+el.offsetHeight/2};}
+function place(el,i,j,pad=2){const c=V.cells[i][j];el.style.transform=`translate(${c.offsetLeft-pad}px,${c.offsetTop-pad}px)`;}
+function valColor(v){const mx=Math.max(1,Math.min(V.m,V.n)),t=v/mx;return `linear-gradient(145deg,hsl(${215+t*150} 78% ${24+t*20}%),hsl(${235+t*150} 80% ${17+t*16}%))`;}
+const esc2=s=>`<code>${esc(s)}</code>`;
+function vPaint(idx,quiet){
+  const {m,n,X,Y,L,steps,F}=V;const cur=steps[idx]||null;
+  const filledCount=Math.min(idx,F);
+  const curRow=cur?(cur.k==='fill'?cur.i:m):m; // row being worked on
+  const twoMode=V.mode==='two';
+  for(let i=0;i<=m;i++)for(let j=0;j<=n;j++){const el=V.cells[i][j];
+    const f=i===0||j===0||((i-1)*n+(j-1))<idx;
+    const was=el._f;el._f=f;
+    el.classList.toggle('f',f);el.classList.toggle('z',f&&(i===0||j===0));
+    if(f){const t=String(L[i][j]);if(el.textContent!==t)el.textContent=t;el.style.background=valColor(L[i][j]);}
+    else{if(el.textContent)el.textContent='';el.style.background='';}
+    el.classList.toggle('m',f&&i>0&&j>0&&X[i-1]===Y[j-1]);
+    const gone=twoMode&&f&&i<curRow-1&&(V.cells.length>2);el.classList.toggle('gone',gone);
+    if(!quiet&&f&&was===false&&i>0&&j>0){el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');}
+    // traceback path flags set below
+    el.classList.remove('path');}
+  const tbDone=V.mode==='full'?Math.max(0,idx-F):0;
+  for(let k=0;k<tbDone;k++){const p=V.tb.path[k];V.cells[p.i][p.j].classList.add('path');}
+  if(tbDone>0||(cur&&cur.k==='tb'))V.cells[m]&&V.cells[m][n].classList.add('path');
+  // trace segments
+  const nextOf=p=>p.a==='match'?[p.i-1,p.j-1]:p.a==='up'?[p.i-1,p.j]:[p.i,p.j-1];
+  while(V.segs>tbDone){V.svg.lastChild&&V.svg.removeChild(V.svg.lastChild);V.segs--;}
+  while(V.segs<tbDone){const p=V.tb.path[V.segs],q=nextOf(p),a=cellCenter(p.i,p.j),b=cellCenter(q[0],q[1]);
+    const ln=document.createElementNS('http://www.w3.org/2000/svg','line');ln.setAttribute('x1',a.x);ln.setAttribute('y1',a.y);ln.setAttribute('x2',b.x);ln.setAttribute('y2',b.y);
+    const len=Math.hypot(b.x-a.x,b.y-a.y);ln.style.setProperty('--len',len);if(quiet)ln.style.animation='none',ln.style.strokeDashoffset=0;V.svg.appendChild(ln);V.segs++;}
+  // quiet re-layout of existing segments
+  if(quiet){[...V.svg.children].forEach((ln,k)=>{const p=V.tb.path[k],q=nextOf(p),a=cellCenter(p.i,p.j),b=cellCenter(q[0],q[1]);ln.setAttribute('x1',a.x);ln.setAttribute('y1',a.y);ln.setAttribute('x2',b.x);ln.setAttribute('y2',b.y);ln.style.setProperty('--len',Math.hypot(b.x-a.x,b.y-a.y));ln.style.animation='none';ln.style.strokeDashoffset=0;});}
+  // cursor + deps
+  const cursor=V.cur,D=V.deps;
+  ['d','u','l'].forEach(k=>D[k].className='dep '+k);
+  $$('.lab.hot').forEach(e=>e.classList.remove('hot'));
+  let phase='done',expl='',codeLine=-1;
+  if(cur&&cur.k==='fill'){
+    cursor.style.opacity=1;place(cursor,cur.i,cur.j);$('b',cursor).textContent=`L[${cur.i}][${cur.j}]`;
+    place(D.d,cur.i-1,cur.j-1);place(D.u,cur.i-1,cur.j);place(D.l,cur.i,cur.j-1);
+    if(cur.eq){D.d.classList.add('show','use');D.u.classList.add('show','dim');D.l.classList.add('show','dim');}
+    else{D.d.classList.add('show','dim');D[cur.src].classList.add('show','use');D[cur.src==='u'?'l':'u'].classList.add('show');}
+    V.xl[cur.i]&&V.xl[cur.i].classList.add('hot');V.yl[cur.j]&&V.yl[cur.j].classList.add('hot');
+    phase=cur.eq?'match':'fill';codeLine=cur.eq?2:3;
+    const xs=esc(X[cur.i-1]),ys=esc(Y[cur.j-1]);
+    expl=cur.eq?`About to fill <code>L[${cur.i}][${cur.j}]</code>. Compare <span class="g"><b>${xs}</b></span> (X[${cur.i}]) with <span class="g"><b>${ys}</b></span> (Y[${cur.j}]): <b class="g">they match</b>. Take the diagonal neighbour <span class="g">↖ ${cur.a}</span> and add 1, so the cell becomes <b>${cur.val}</b>.`
+      :`About to fill <code>L[${cur.i}][${cur.j}]</code>. Compare <b>${xs}</b> with <b>${ys}</b>: <b>different</b>. Take the larger of <span class="c1">↑ up = ${cur.u}</span> and <span class="gr">← left = ${cur.l}</span>, so the cell becomes <b>${cur.val}</b>${cur.u===cur.l?' (equal, either works)':''}.`;
+    if(V.mode==='two'){expl+=` <span style="color:var(--muted)">Only rows ${cur.i-1} and ${cur.i} are kept in memory.</span>`;}
+  }else if(cur&&cur.k==='tb'){
+    cursor.style.opacity=1;place(cursor,cur.i,cur.j);$('b',cursor).textContent=`at (${cur.i},${cur.j})`;
+    const tgt=nextOf(cur),key=cur.a==='match'?'d':cur.a==='up'?'u':'l';place(D[key],tgt[0],tgt[1]);D[key].classList.add('show','use');
+    V.xl[cur.i]&&V.xl[cur.i].classList.add('hot');V.yl[cur.j]&&V.yl[cur.j].classList.add('hot');
+    phase='tb';
+    if(cur.a==='match'){codeLine=5;expl=`Traceback at <code>(${cur.i},${cur.j})</code>: <b>${esc(X[cur.i-1])}</b> = <b>${esc(Y[cur.j-1])}</b>. This element belongs to the LCS. Record it and move <span class="g">↖ diagonally</span>.`;}
+    else if(cur.a==='up'){codeLine=6;expl=`Traceback at <code>(${cur.i},${cur.j})</code>: <b>${esc(X[cur.i-1])}</b> ≠ <b>${esc(Y[cur.j-1])}</b>. Up is ${L[cur.i-1][cur.j]}, left is ${L[cur.i][cur.j-1]}. Up is at least as large, so move <span class="c1">↑ up</span>.`;}
+    else{codeLine=7;expl=`Traceback at <code>(${cur.i},${cur.j})</code>: <b>${esc(X[cur.i-1])}</b> ≠ <b>${esc(Y[cur.j-1])}</b>. Left (${L[cur.i][cur.j-1]}) beats up (${L[cur.i-1][cur.j]}), so move <span class="gr">← left</span>.`;}
+  }else{
+    cursor.style.opacity=0;
+    if(m===0||n===0){expl=`One sequence is empty, so there is nothing to compare. The border is all zeros and the LCS length is 0.`;}
+    else if(V.mode==='two'){expl=`All ${F} cells are processed. The answer <b>L[${m}][${n}] = ${L[m][n]}</b> survives in the last row, but the rows that held the path were discarded.`;}
+    else{expl=`Done. <b>L[${m}][${n}] = ${L[m][n]}</b> is the LCS length. The magenta path is one optimal LCS.`;}
+  }
+  if(idx===0&&cur&&cur.k==='fill'&&!quiet)expl='<span style="color:var(--muted)">Row 0 and column 0 start as zeros (an empty prefix has no common elements).</span><br>'+expl;
+  $('#vexplain').innerHTML=expl;
+  $$('#vcode div').forEach((d,k)=>d.classList.toggle('on',k===codeLine||(cur&&cur.k==='fill'&&k<2)));
+  const ph=$('#vphase');ph.textContent={fill:'Computing',match:'Match found',tb:'Traceback',done:'Complete'}[phase];
+  bg.hue(HUE[phase==='tb'?'tb':phase]);
+  // results
+  const done=!cur;$('#vlen').textContent=idx>=F&&(F>0||done)?L[m][n]:(F===0&&done?0:'–');
+  $('#vcells').textContent=filledCount;
+  const keptRows=V.mode==='two'?Math.min(2,m+1):m+1;$('#vrow').textContent=V.mode==='two'?`${keptRows}/${m+1}`:`${m+1}/${m+1}`;
+  const got=V.tb.path.slice(0,tbDone).filter(p=>p.a==='match').map(p=>X[p.i-1]).reverse();
+  const out=$('#vlcs');const want=done&&V.mode==='full'?V.tb.words:got;
+  const cmp=out.dataset.sig;const sig=want.join('\u0001')+'|'+V.mode;
+  if(cmp!==sig){const prevN=(out.dataset.n|0);out.innerHTML=want.length?want.map((w,k)=>`<span class="tk lit ${k>=prevN&&want.length>prevN?'enter':''}" style="--c:${60+k*(250/Math.max(want.length,1))}">${esc(w)}</span>`).join(''):`<span class="note" style="margin:0">${V.mode==='two'&&done?'LCS cannot be rebuilt from two rows.':(done?'Empty LCS.':'The LCS appears here during the traceback.')}</span>`;out.dataset.sig=sig;out.dataset.n=want.length;}
+  // rouge row when words & done
+  const rr=$('#vrouge');
+  if(V.unit==='words'&&done&&n>0&&m>0&&(V.mode==='full'||true)){const l=L[m][n],p=l/n,r=l/m,f=l>0?2*p*r/(p+r):0;
+    rr.innerHTML=`ROUGE-L (X = reference, Y = candidate)<br>P = <b>${l}/${n}</b> = <b>${p.toFixed(3)}</b> · R = <b>${l}/${m}</b> = <b>${r.toFixed(3)}</b> · F1 = <b>${f.toFixed(3)}</b>`;}else rr.innerHTML='';
+  // memory meter
+  const full=(m+1)*(n+1),two=2*(Math.min(m,n)+1);
+  $('#vmem').innerHTML=`<div class="t"><span>Full table</span><span>${full} cells</span></div><div class="b full"><i style="width:100%"></i></div>
+    <div class="t"><span>Two rows (shorter sequence as columns)</span><span>${two} cells</span></div><div class="b"><i style="width:${clamp(two/full*100,3,100)}%"></i></div>`;
+  const msg=$('#vmsg');
+  if(V.mode==='two'&&done&&m>0&&n>0){msg.innerHTML=`<div class="warn" style="margin-top:12px">Length found: <b>${L[m][n]}</b>. The cells a traceback would walk through are gone. Hirschberg's algorithm recovers the actual LCS in the same linear space. <button class="chip on" id="tohirsch" style="margin-left:6px">Show Hirschberg</button></div>`;}
+  else if(V.truncated){msg.innerHTML=`<div class="note">Showing the first ${CAP} tokens of each sequence to keep the table readable.</div>`;}
+  else msg.innerHTML='';
+}
+function vLoad(x,y,u,mode){if(u&&u!==V.unit){V.unit=u;$$('#vunit button').forEach(b=>b.classList.toggle('on',b.dataset.v===u));}
+  if(mode&&mode!==V.mode){V.mode=mode;$$('#vmode button').forEach(b=>b.classList.toggle('on',b.dataset.v===mode));}
+  $('#vx').value=x;$('#vy').value=y;vBuild();}
+$('#vpresets').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const p=PRESETS[+b.dataset.i];
+  $$('#vpresets .chip').forEach(c=>c.classList.toggle('on',c===b));vLoad(p.x,p.y,p.u);});
+['#vx','#vy'].forEach(s=>$(s).addEventListener('input',()=>{$$('#vpresets .chip').forEach(c=>c.classList.remove('on'));vBuild();}));
+$('#vunit').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;V.unit=b.dataset.v;$$('#vunit button').forEach(x=>x.classList.toggle('on',x===b));vBuild();});
+$('#vmode').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;V.mode=b.dataset.v;$$('#vmode button').forEach(x=>x.classList.toggle('on',x===b));vBuild();});
+$('#vmsg').addEventListener('click',e=>{if(e.target.id==='tohirsch'){$('#hx').value=V.X.join(V.unit==='words'?'':'');$('#hy').value=V.Y.join('');showTab('learn');setTimeout(()=>{hBuild();$('#hxrow').scrollIntoView({behavior:'smooth',block:'center'});},200);}});
+addEventListener('resize',()=>{if($('#p-visualizer').classList.contains('active'))vFit();});
+
+/* ================= ROUGE LAB ================= */
+const DEFAULT_PAIRS=[
+ ['the cat sat on the mat','the cat is on the mat today'],['','some candidate text'],['a reference summary',''],['',''],
+ ['The court upheld the ruling.','the court UPHELD the ruling'],['apples and oranges','dogs run fast'],['a a a b b','a b a b a'],['the the the the','the the'],
+ ['The government announced new tax rules on Monday.','New tax rules were announced by the government.'],['Company profits rose sharply in the third quarter.','Profits rose in the quarter.']];
+const NAMES=['Sample 2','Empty reference','Empty candidate','Both empty','Identical','Disjoint','Repeated words','Heavy repetition','Realistic','Short candidate'];
+let pairs=DEFAULT_PAIRS.map(p=>p.slice()),selPair=0,rbuilt=false;
+const hueOf=v=>v*125;
+function rCompute(){return pairs.map(p=>rouge(p[0],p[1]));}
+function rRender(full=true){
+  const host=$('#pairs');
+  if(full||!rbuilt){host.innerHTML=pairs.map((p,i)=>`<div class="pair" data-i="${i}"><div class="num">${i+1}</div>
+    <textarea aria-label="Reference ${i+1}" data-k="0" rows="2">${esc(p[0])}</textarea><textarea aria-label="Candidate ${i+1}" data-k="1" rows="2">${esc(p[1])}</textarea>
+    <div class="res"><div class="r"><span>P</span><div class="bar"><i></i></div><b></b></div><div class="r"><span>R</span><div class="bar"><i></i></div><b></b></div><div class="r"><span>F</span><div class="bar"><i></i></div><b></b></div></div></div>`).join('');rbuilt=true;}
+  rUpdate();
+}
+function rUpdate(){
+  const res=rCompute();let best=0;res.forEach((r,i)=>{if(r.f>res[best].f)best=i;});
+  $$('#pairs .pair').forEach((el,i)=>{const r=res[i];el.classList.toggle('sel',i===selPair);el.classList.toggle('best',i===best);
+    [r.p,r.r,r.f].forEach((v,k)=>{const row=$$('.r',el)[k];$('i',row).style.width=(v*100)+'%';$('i',row).style.background=`hsl(${hueOf(v)} 85% 58%)`;$('b',row).textContent=v.toFixed(3);});});
+  $('#kinfo').textContent=`K = ${pairs.length} · best pair: ${best+1} (F1 = ${res[best].f.toFixed(3)})`;
+  $('#addpair').style.display=pairs.length>=10?'none':'';
+  rDetail(res[selPair],true);
+}
+let lastSel=-1;
+function rDetail(r,anim){
+  $('#rsel').textContent='#'+(selPair+1)+(NAMES[selPair]&&JSON.stringify(pairs[selPair])===JSON.stringify(DEFAULT_PAIRS[selPair])?' · '+NAMES[selPair]:'');
+  const C=2*Math.PI*44;
+  const g=[['Precision',r.p],['Recall',r.r],['F1',r.f]];
+  const gh=$('#gauges');
+  if(!gh.children.length)gh.innerHTML=g.map(()=>`<div class="gauge"><svg viewBox="0 0 112 112"><circle class="bg" cx="56" cy="56" r="44"/><circle class="fg" cx="56" cy="56" r="44" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><div class="v"></div><div class="n"></div></div>`).join('');
+  [...gh.children].forEach((el,k)=>{const v=g[k][1],fg=$('.fg',el);fg.style.strokeDashoffset=C*(1-v);fg.style.stroke=`hsl(${hueOf(v)} 90% 60%)`;fg.style.color=`hsl(${hueOf(v)} 90% 60%)`;
+    $('.v',el).textContent=v.toFixed(3);$('.v',el).style.color=`hsl(${hueOf(v)} 90% 68%)`;$('.n',el).textContent=g[k][0];});
+  const {R,C:Cd,l}=r;
+  $('#rformula').innerHTML=`LCS length <b>l = ${l}</b>, reference <b>r = ${R.length}</b>, candidate <b>c = ${Cd.length}</b><br>Precision = l/c = ${Cd.length?`${l}/${Cd.length}`:'0 (empty candidate)'} = <b>${r.p.toFixed(3)}</b><br>Recall = l/r = ${R.length?`${l}/${R.length}`:'0 (empty reference)'} = <b>${r.r.toFixed(3)}</b><br>F1 = ${l>0?'2PR/(P+R)':'0 because l = 0'} = <b>${r.f.toFixed(3)}</b>`;
+  const inR=new Map(),inC=new Map();r.tb.pairs.forEach((p,k)=>{inR.set(p[0],k);inC.set(p[1],k);});
+  const hue=k=>40+k*(280/Math.max(r.tb.pairs.length,1));
+  const fresh=selPair!==lastSel||!anim;lastSel=selPair;
+  const chips=(arr,map)=>arr.length?arr.map((w,i)=>map.has(i)?`<span class="tk lit ${fresh?'enter':''}" style="--c:${hue(map.get(i))};animation-delay:${map.get(i)*60}ms">${esc(w)}</span>`:`<span class="tk dim">${esc(w)}</span>`).join(''):'<span class="note" style="margin:0">(empty)</span>';
+  const sig=JSON.stringify([R,Cd,selPair]);const hh=$('#rdetail');
+  if(hh.dataset.sig!==sig){hh.dataset.sig=sig;$('#rref').innerHTML=chips(R,inR);$('#rcand').innerHTML=chips(Cd,inC);
+    $('#rlcs').innerHTML=r.tb.words.length?r.tb.words.map((w,k)=>`<span class="tk lit ${fresh?'enter':''}" style="--c:${hue(k)}">${esc(w)}</span>`).join(''):'<span class="note" style="margin:0">(none)</span>';}
+  bg.hue(r.f>.66?150:r.f>.33?46:r.f>0?20:340);
+}
+$('#pairs').addEventListener('click',e=>{const el=e.target.closest('.pair');if(!el)return;const i=+el.dataset.i;if(i!==selPair){selPair=i;rUpdate();}});
+$('#pairs').addEventListener('input',e=>{const t=e.target.closest('textarea');if(!t)return;const i=+t.closest('.pair').dataset.i;pairs[i][+t.dataset.k]=t.value;selPair=i;rUpdate();});
+$('#addpair').addEventListener('click',()=>{if(pairs.length<10){pairs.push(['','']);selPair=pairs.length-1;rRender();$$('#pairs textarea').at(-2).focus();}});
+$('#resetpairs').addEventListener('click',()=>{pairs=DEFAULT_PAIRS.map(p=>p.slice());selPair=0;lastSel=-1;rRender();toast('Examples restored');});
+$('#openviz').addEventListener('click',()=>{const p=pairs[selPair];showTab('visualizer');setTimeout(()=>{vLoad(tokenize(p[0]).slice(0,CAP).join(' '),tokenize(p[1]).slice(0,CAP).join(' '),'words');},120);});
+
+/* ================= SELF-LEARNING ================= */
+// Q1 memory
+function docMem(){const n=Math.round(Math.pow(10,+$('#docrng').value));$('#docn').textContent=n.toLocaleString();
+  const full=(n+1)*(n+1),two=2*(n+1),mb=c=>{const b=c*8;return b>=1e9?(b/1e9).toFixed(2)+' GB':b>=1e6?(b/1e6).toFixed(1)+' MB':(b/1e3).toFixed(1)+' KB';};
+  $('#docmem').innerHTML=`<div class="t"><span>Full table (n+1)²</span><span>${fmt(full)} cells · ${mb(full)}</span></div><div class="b full"><i style="width:100%"></i></div>
+   <div class="t"><span>Two rows 2(n+1)</span><span>${fmt(two)} cells · ${mb(two)}</span></div><div class="b"><i style="width:${clamp(two/full*100,.8,100)}%"></i></div>`;
+  const r=$('#docrng');paintRange(r);}
+$('#docrng').addEventListener('input',docMem);
+$('#gotwo').addEventListener('click',()=>{showTab('visualizer');setTimeout(()=>{vLoad('ABCBDAB','BDCABA','chars','two');vplayer.play();},150);});
+
+// Hirschberg
+const H={ev:[],out:[],X:[],Y:[]};
+const hplayer=new Player($('#hctl'),i=>hPaint(i));
+function hBuild(){H.X=[...$('#hx').value.replace(/\s+/g,'')].slice(0,12);H.Y=[...$('#hy').value.replace(/\s+/g,'')].slice(0,12);
+  const r=hirschEvents(H.X,H.Y);H.ev=r.ev;H.out=r.out;
+  $('#hxrow').innerHTML=H.X.map(c=>`<div class="hc">${esc(c)}</div>`).join('');$('#hyrow').innerHTML=H.Y.map(c=>`<div class="hc">${esc(c)}</div>`).join('');
+  hplayer.setLen(H.ev.length);}
+function hPaint(idx){
+  const evs=H.ev;const e=evs[idx]||null;const last=idx>0?evs[idx-1]:null;
+  const xc=$$('#hxrow .hc'),yc=$$('#hyrow .hc');
+  const focus=e||last;
+  xc.forEach((c,i)=>{c.className='hc';if(e&&!(i>=e.xl&&i<e.xr))c.classList.add('out');else if(e)c.classList.add('in');if(e&&e.t==='split'&&i===e.mid)c.classList.add('cutL');});
+  yc.forEach((c,j)=>{c.className='hc';if(e&&!(j>=e.yl&&j<e.yr))c.classList.add('out');else if(e)c.classList.add('in');if(e&&e.t==='split'&&j===e.split)c.classList.add('cutL');});
+  // lit chars already placed
+  const outNow=(idx>0?evs[Math.min(idx,evs.length)-1].out:[]).length;
+  const usedX=[],usedY=[];for(let k=0;k<idx;k++){const v=evs[k];if(v.t==='leaf'&&v.hit>=0){usedX.push(v.xl);usedY.push(v.hit);}}
+  usedX.forEach((x,k)=>{const c=60+k*(250/Math.max(H.out.length,1));[xc[x],yc[usedY[k]]].forEach(el=>{el.classList.add('lit');el.style.setProperty('--c',c);});});
+  // bars
+  const bars=$('#hbars');
+  let sc=[],best=-1,labels=[];
+  if(e&&e.t==='split'){sc=e.sc;best=e.sj;labels=sc.map((_,j)=>e.yl+j);}
+  else if(focus&&focus.t==='split'){sc=focus.sc;best=focus.sj;labels=sc.map((_,j)=>focus.yl+j);}
+  const mx=Math.max(1,...sc);
+  bars.innerHTML=sc.length?sc.map((v,j)=>`<div class="col ${j===best?'best':''}"><em>${v}</em><i style="height:${v/mx*78}px"></i><span>${j===0?'|':esc(H.Y[e?e.yl+j-1:focus.yl+j-1]||'')}</span></div>`).join(''):'<span class="note">Scores appear at each split.</span>';
+  // stack
+  const shown=evs.slice(0,idx+1).filter(v=>v.t==='split'||v.t==='leaf').slice(-8);
+  $('#hstack').innerHTML=shown.map(v=>`<div style="--c:${v.d*55+190};margin-left:${v.d*10}px">${v.t==='split'?`split X[${v.xl}..${v.xr-1}] vs Y[${v.yl}..${v.yr-1}]`:`leaf “${esc(v.ch)}” ${v.hit>=0?'✓ found':'✗ absent'}`}</div>`).join('');
+  $('#hstack').scrollTop=1e5;
+  // explain
+  let ex;
+  if(!e){ex=`Finished. Hirschberg returned <b>${esc(H.out.join(''))||'nothing'}</b> (length ${H.out.length}) using only linear extra space.`;bg.hue(HUE.done);}
+  else if(e.t==='split'){const xs=H.X.slice(e.xl,e.xr).join(''),ys=H.Y.slice(e.yl,e.yr).join('');
+    ex=`Depth ${e.d}. Split X-part <b>${esc(xs)}</b> after position ${e.mid}. Forward two-row scores for the top half plus backward scores for the bottom half peak at column ${e.sj} (value <b class="g">${e.sc[e.sj]}</b>), so an optimal LCS crosses between <b>${esc(H.Y.slice(e.yl,e.split).join('')||'∅')}</b> and <b>${esc(H.Y.slice(e.split,e.yr).join('')||'∅')}</b>. Recurse on both sides.`;bg.hue(HUE.tb);}
+  else if(e.t==='leaf'){ex=`Base case: one character <b>${esc(e.ch)}</b> against <b>${esc(H.Y.slice(e.yl,e.yr).join(''))}</b>. ${e.hit>=0?'It occurs, so it joins the LCS.':'It does not occur, so nothing is added.'}`;bg.hue(HUE.match);}
+  else{ex='Empty side: nothing to match here.';bg.hue(HUE.fill);}
+  $('#hexplain').innerHTML=ex;
+  const got=e?e.out:(H.out);
+  const sig=got.join('|');const ho=$('#hout');
+  if(ho.dataset.sig!==sig){const pn=ho.dataset.n|0;ho.innerHTML=got.length?got.map((c,k)=>`<span class="tk lit ${k>=pn?'enter':''}" style="--c:${60+k*(250/Math.max(H.out.length,1))}">${esc(c)}</span>`).join(''):'<span class="note" style="margin:0">–</span>';ho.dataset.sig=sig;ho.dataset.n=got.length;}
+}
+['#hx','#hy'].forEach(s=>$(s).addEventListener('input',hBuild));
+
+// Compare three problems
+function cmpRender(){
+  const a=[...$('#cx').value].slice(0,14),b=[...$('#cy').value].slice(0,14);
+  const L=lcsTable(a,b),tb=traceback(L,a,b),ss=lcsSubstring(a,b),ed=editOps(a,b);
+  const hl=(arr,cls,idxMap)=>`<div class="hrow">${arr.map((c,i)=>`<div class="hc ${idxMap(i)||''}" style="${idxMap(i)==='lit'?'--c:'+(40+(idxMap.k?.get?.(i)||0)):''};transition-delay:${i*35}ms">${esc(c)}</div>`).join('')}</div>`;
+  const ka=new Map(tb.pairs.map((p,k)=>[p[0],k])),kb=new Map(tb.pairs.map((p,k)=>[p[1],k]));
+  const litA=i=>ka.has(i)?'lit':'',litB=i=>kb.has(i)?'lit':'';
+  const chipsLit=(arr,mp)=>`<div class="hrow">${arr.map((c,i)=>mp.has(i)?`<div class="hc lit" style="--c:${60+mp.get(i)*60};transition-delay:${i*35}ms">${esc(c)}</div>`:`<div class="hc">${esc(c)}</div>`).join('')}</div>`;
+  const subA=i=>i>=ss.a0&&i<ss.a0+ss.len?'sub':'',subB=i=>i>=ss.b0&&i<ss.b0+ss.len?'sub':'';
+  const chipsCls=(arr,f)=>`<div class="hrow">${arr.map((c,i)=>`<div class="hc ${f(i)}" style="transition-delay:${i*35}ms">${esc(c)}</div>`).join('')}</div>`;
+  const opsHtml=ed.ops.map(o=>o.o==='='?`<div class="hc">${esc(a[o.i])}</div>`:o.o==='sub'?`<div class="hc sb" title="substitute">${esc(a[o.i])}→${esc(b[o.j])}</div>`:o.o==='del'?`<div class="hc del" title="delete">${esc(a[o.i])}</div>`:`<div class="hc ins" title="insert">+${esc(b[o.j])}</div>`).join('');
+  const indel=a.length+b.length-2*tb.words.length;
+  $('#cmp').innerHTML=`
+   <div class="card"><h3>Longest Common Subsequence</h3><div class="big">${tb.words.length}<small> &nbsp;“${esc(tb.words.join(''))}”</small></div>${chipsLit(a,ka)}${chipsLit(b,kb)}<div class="note">Order kept, gaps allowed. If a character matches: diagonal + 1, else the max of up and left.</div></div>
+   <div class="card"><h3>Longest Common Substring</h3><div class="big">${ss.len}<small> &nbsp;“${esc(a.slice(ss.a0,ss.a0+ss.len).join(''))}”</small></div>${chipsCls(a,subA)}${chipsCls(b,subB)}<div class="note">Must be contiguous. A mismatch resets the cell to 0, and the answer is the largest cell anywhere.</div></div>
+   <div class="card"><h3>Edit Distance</h3><div class="big">${ed.d}<small> &nbsp;edits</small></div><div class="hrow">${opsHtml}</div><div class="note">Cheapest insert, delete or substitute sequence from A to B. With only inserts and deletes it is m + n − 2·LCS = ${indel}.</div></div>`;
+}
+['#cx','#cy'].forEach(s=>$(s).addEventListener('input',cmpRender));
+
+// Complexity chart
+function cplx(){const nmax=22,N=+$('#nrng').value;paintRange($('#nrng'));
+  const W=640,Hh=300,pl=54,pr=20,pt=18,pb=34,xs=n=>pl+(n-1)/(nmax-1)*(W-pl-pr),maxLog=13,ys=v=>Hh-pb-(Math.log10(Math.max(v,1))/maxLog)*(Hh-pt-pb);
+  let s='';for(let p=0;p<=12;p+=2){const y=ys(Math.pow(10,p));s+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-8}" y="${y+4}" text-anchor="end">1e${p}</text>`;}
+  for(let n=1;n<=nmax;n+=3)s+=`<text x="${xs(n)}" y="${Hh-10}" text-anchor="middle">${n}</text>`;
+  s+=`<line class="ax" x1="${pl}" x2="${W-pr}" y1="${Hh-pb}" y2="${Hh-pb}"/><line class="ax" x1="${pl}" x2="${pl}" y1="${pt}" y2="${Hh-pb}"/>`;
+  const line=f=>Array.from({length:nmax},(_,k)=>`${k?'L':'M'}${xs(k+1).toFixed(1)},${ys(f(k+1)).toFixed(1)}`).join('');
+  s+=`<path class="ln" d="${line(bruteCalls)}" stroke="#ff5fc8" style="color:#ff5fc8"/><path class="ln" d="${line(n=>n*n)}" stroke="#4fe3ff" style="color:#4fe3ff"/>`;
+  const b=bruteCalls(N),d=N*N;
+  s+=`<circle cx="${xs(N)}" cy="${ys(b)}" r="7" fill="#ff5fc8" stroke="#fff" stroke-width="2"/><circle cx="${xs(N)}" cy="${ys(d)}" r="7" fill="#4fe3ff" stroke="#fff" stroke-width="2"/>`;
+  s+=`<text x="${W-pr}" y="${pt+34}" text-anchor="end" style="fill:#ff5fc8">brute force ~ 2^(2n)</text><text x="${W-pr}" y="${ys(nmax*nmax)+20}" text-anchor="end" style="fill:#4fe3ff">DP table n²</text><text x="${W/2}" y="${Hh-0}" text-anchor="middle" style="display:none"></text>`;
+  $('#cplx').innerHTML=s;$('#nval').textContent=fmt(b);$('#dval').textContent=fmt(d);
+  $('#nratio').textContent=`For n = ${N} the recursion makes ${b.toLocaleString()} calls; the table fills ${d.toLocaleString()} cells. That is ${(b/d>=100?Math.round(b/d).toLocaleString():(b/d).toFixed(1))}× more work.`;}
+$('#nrng').addEventListener('input',cplx);
+
+// Applications
+function apps(){
+  const A=['def total(items):','    s = 0','    for x in items:','    s += x.price','    return s'],B=['def total(items, tax):','    s = 0','    for x in items:','    s += x.price','    s *= 1 + tax','    return s'];
+  const L=lcsTable(A,B),tb=traceback(L,A,B);const kept=new Set(tb.pairs.map(p=>p[0])),keptB=new Set(tb.pairs.map(p=>p[1]));
+  let i=0,j=0,rows=[];const pairsI=tb.pairs;
+  for(const [pa,pb] of [...pairsI,[A.length,B.length]]){while(i<pa){rows.push(['del',A[i++]]);}while(j<pb){rows.push(['add',B[j++]]);}if(pa<A.length){rows.push(['same',A[i]]);i++;j++;}}
+  $('#appdiff').innerHTML=rows.map((r,k)=>`<div class="${r[0]}" style="animation-delay:${k*90}ms">${r[0]==='add'?'+ ':r[0]==='del'?'- ':'  '}${esc(r[1])}</div>`).join('');
+  const d1=[...'ACGTTGACCATGCA'],d2=[...'AGGTCGATCAGGCA'];const dl=lcsTable(d1,d2),dt=traceback(dl,d1,d2);
+  const m1=new Map(dt.pairs.map((p,k)=>[p[0],k])),m2=new Map(dt.pairs.map((p,k)=>[p[1],k]));
+  const nuc={A:140,C:200,G:45,T:330};
+  const dn=(arr,mp)=>arr.map((c,i)=>`<div class="hc ${mp.has(i)?'lit':''}" style="--c:${nuc[c]};transition-delay:${i*30}ms;${mp.has(i)?'':'opacity:.4'}">${c}</div>`).join('');
+  $('#appd1').innerHTML=dn(d1,m1);$('#appd2').innerHTML=dn(d2,m2);$('#appdn').textContent=`Shared subsequence: ${dt.words.join('')} (${dt.words.length} of ${d1.length} bases, ${(dt.words.length/d1.length*100).toFixed(0)}% similarity).`;
+  const orig='Dynamic programming solves overlapping subproblems by storing their answers in a table.',sus='Dynamic programming solves big overlapping subproblems quickly by storing all answers in a table.';
+  const r=rouge(orig,sus);const mm=new Map(r.tb.pairs.map((p,k)=>[p[1],k]));
+  $('#appp').innerHTML=r.C.map((w,i)=>mm.has(i)?`<span class="tk lit" style="--c:${40+mm.get(i)*22}">${esc(w)}</span>`:`<span class="tk dim">${esc(w)}</span>`).join('');
+  $('#appn').textContent=`Recall ${(r.r*100).toFixed(0)}% of the original sentence reappears in order.`;}
+let learnInit=false;
+function learnRun(){if(!learnInit){learnInit=true;docMem();hBuild();cmpRender();cplx();apps();}
+  bg.hue(HUE.idle+20);}
+
+/* ================= VIVA ================= */
+const QA=[
+ ['What does L[i][j] mean?','The length of the LCS of the first i elements of X and the first j elements of Y. Row 0 and column 0 are zero because an empty prefix has nothing in common. The answer sits in L[m][n].'],
+ ['Why is the recurrence correct?','If X[i] = Y[j], that last element can always be appended to an optimal LCS of the shorter prefixes, so L[i][j] = L[i-1][j-1] + 1. Otherwise the last element of at least one string is not in the LCS, so we drop it from X or from Y and keep the better: max(L[i-1][j], L[i][j-1]).'],
+ ['What are the time and space complexities?','Time O(m·n) because each of the (m+1)(n+1) cells costs O(1). Space O(m·n) for the table. The traceback adds only O(m+n) time.'],
+ ['Why is plain recursion so slow?','Each mismatch splits into two calls, and the same (i, j) sub-problems are solved again and again. In the worst case (no matching characters, both strings of length n) there are exactly 2·C(2n,n) − 1 calls, which grows like 4^n. Memoising it gives exactly the DP table, O(m·n).'],
+ ['How does the traceback work, and why can several LCS exist?','Start at (m, n). If the elements match, record the element and go diagonally. Otherwise move to the neighbour with the larger value. When up and left are equal, either choice is valid, so different tie rules give different but equally long answers (BCBA, BDAB, BCAB for sample 1).'],
+ ['How is ROUGE-L computed, and what do the edge cases give?','Precision = l/c, recall = l/r, F1 = 2PR/(P+R). If a summary is empty, the denominator would be zero, so the score is 0. If l = 0, F1 is 0. Identical summaries give 1.000 for all three. Case and punctuation are removed before comparison.'],
+ ['How does the two-row version work, and what does it lose?','Row i only needs row i−1, so two arrays are swapped each pass: space O(min(m,n)). The length is exact, but the earlier rows are overwritten, so the traceback path cannot be rebuilt.'],
+ ['How does Hirschberg\'s algorithm recover the LCS in linear space?','Split X in half. Compute forward scores of the first half against Y and backward scores of the second half against reversed Y, both with two rows. The column where their sum is largest is where an optimal LCS crosses the middle. Recurse on both halves. Total time is still O(m·n), about twice the plain DP.'],
+ ['How do LCS, Longest Common Substring and Edit Distance differ?','LCS keeps order but allows gaps. Substring must be contiguous, and a mismatch resets the cell to 0. Edit distance minimises the cost of insert, delete and substitute operations. With insert and delete only, distance = m + n − 2·LCS.'],
+ ['Name two real uses of LCS.','Diff and version control (unchanged lines are the LCS of two file versions), DNA or protein comparison, and plagiarism or summarisation scoring such as ROUGE-L.']];
+$('#qa').innerHTML=QA.map((q,i)=>`<div class="q"><button aria-expanded="false"><span><span class="mark">Q${i+1}</span>${esc(q[0])}</span><span class="pl">+</span></button><div class="a"><div>${esc(q[1])}</div></div></div>`).join('');
+$('#qa').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const q=b.parentElement,o=q.classList.toggle('open');b.setAttribute('aria-expanded',o);});
+
+/* ================= keyboard + boot ================= */
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(document.activeElement.tagName))return;
+  const act=$('section.panel.active').id,p=act==='p-visualizer'?vplayer:(act==='p-learn'?hplayer:null);if(!p)return;
+  if(e.code==='Space'){e.preventDefault();p.act('play');}else if(e.key==='ArrowRight')p.act('fwd');else if(e.key==='ArrowLeft')p.act('back');});
+setSpeed(SPEEDS.includes(speed.v)||speed.v>0?speed.v:1);
+vLoad('ABCBDAB','BDCABA','chars','full');$$('#vpresets .chip')[0].classList.add('on');
+showTab(location.hash.slice(1)||'visualizer',true);
+addEventListener('resize',()=>placePill(true));
+document.fonts&&document.fonts.ready.then(()=>{placePill(true);vFit();});
+</script>
+
+</body></html>

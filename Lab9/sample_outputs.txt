@@ -1,0 +1,190 @@
+============================================================
+SAMPLE 1 - character sequences
+============================================================
+          B  D  C  A  B  A
+    |  0  0  0  0  0  0  0
+  A |  0  0  0  0  1  1  1
+  B |  0  1  1  1  1  2  2
+  C |  0  1  1  2  2  2  2
+  B |  0  1  1  2  2  3  3
+  D |  0  1  2  2  2  3  3
+  A |  0  1  2  2  3  3  4
+  B |  0  1  2  2  3  4  4
+LCS length : 4 
+One LCS    : BCBA 
+
+============================================================
+SAMPLE 2 + 8 OWN TEST CASES (batch mode)
+============================================================
+NOTE on Sample 2: the question paper prints LCS length 4 / P=4/7 / F1=0.615, but its own LCS words
+'the cat on the mat' are 5 words. Correct values are l=5, P=5/7=0.714, R=5/6=0.833, F1=0.769 (Pair 1 below).
+
+--- Pair 1 ---
+Reference : the cat sat on the mat
+Candidate : the cat is on the mat today
+DP table  :
+                 the   cat    is    on   the   mat today
+       |     0     0     0     0     0     0     0     0
+   the |     0     1     1     1     1     1     1     1
+   cat |     0     1     2     2     2     2     2     2
+   sat |     0     1     2     2     2     2     2     2
+    on |     0     1     2     2     3     3     3     3
+   the |     0     1     2     2     3     4     4     4
+   mat |     0     1     2     2     3     4     5     5
+LCS length : 5
+LCS words  : the cat on the mat
+Precision  : 0.714   (5/7)
+Recall     : 0.833   (5/6)
+F1         : 0.769
+
+--- Pair 2 ---
+Reference : 
+Candidate : some candidate text
+DP table  :
+                            some candidate      text
+           |         0         0         0         0
+LCS length : 0
+LCS words  : 
+Precision  : 0.000   (0/3)
+Recall     : 0.000   (empty reference)
+F1         : 0.000
+
+--- Pair 3 ---
+Reference : a reference summary
+Candidate : 
+DP table  :
+                      
+           |         0
+         a |         0
+ reference |         0
+   summary |         0
+LCS length : 0
+LCS words  : 
+Precision  : 0.000   (empty candidate)
+Recall     : 0.000   (0/3)
+F1         : 0.000
+
+--- Pair 4 ---
+Reference : 
+Candidate : 
+DP table  :
+        
+    |  0
+LCS length : 0
+LCS words  : 
+Precision  : 0.000   (empty candidate)
+Recall     : 0.000   (empty reference)
+F1         : 0.000
+
+--- Pair 5 ---
+Reference : the court upheld the ruling
+Candidate : the court upheld the ruling
+DP table  :
+                    the  court upheld    the ruling
+        |      0      0      0      0      0      0
+    the |      0      1      1      1      1      1
+  court |      0      1      2      2      2      2
+ upheld |      0      1      2      3      3      3
+    the |      0      1      2      3      4      4
+ ruling |      0      1      2      3      4      5
+LCS length : 5
+LCS words  : the court upheld the ruling
+Precision  : 1.000   (5/5)
+Recall     : 1.000   (5/5)
+F1         : 1.000
+
+--- Pair 6 ---
+Reference : apples and oranges
+Candidate : dogs run fast
+DP table  :
+                      dogs     run    fast
+         |       0       0       0       0
+  apples |       0       0       0       0
+     and |       0       0       0       0
+ oranges |       0       0       0       0
+LCS length : 0
+LCS words  : 
+Precision  : 0.000   (0/3)
+Recall     : 0.000   (0/3)
+F1         : 0.000
+
+--- Pair 7 ---
+Reference : a a a b b
+Candidate : a b a b a
+DP table  :
+          a  b  a  b  a
+    |  0  0  0  0  0  0
+  a |  0  1  1  1  1  1
+  a |  0  1  1  2  2  2
+  a |  0  1  1  2  2  3
+  b |  0  1  2  2  3  3
+  b |  0  1  2  2  3  3
+LCS length : 3
+LCS words  : a a a
+Precision  : 0.600   (3/5)
+Recall     : 0.600   (3/5)
+F1         : 0.600
+
+--- Pair 8 ---
+Reference : the the the the
+Candidate : the the
+DP table  :
+           the the
+     |   0   0   0
+ the |   0   1   1
+ the |   0   1   2
+ the |   0   1   2
+ the |   0   1   2
+LCS length : 2
+LCS words  : the the
+Precision  : 1.000   (2/2)
+Recall     : 0.500   (2/4)
+F1         : 0.667
+
+--- Pair 9 ---
+Reference : the government announced new tax rules on monday
+Candidate : new tax rules were announced by the government
+DP table  :
+                                new        tax      rules       were  announced         by        the government
+            |          0          0          0          0          0          0          0          0          0
+        the |          0          0          0          0          0          0          0          1          1
+ government |          0          0          0          0          0          0          0          1          2
+  announced |          0          0          0          0          0          1          1          1          2
+        new |          0          1          1          1          1          1          1          1          2
+        tax |          0          1          2          2          2          2          2          2          2
+      rules |          0          1          2          3          3          3          3          3          3
+         on |          0          1          2          3          3          3          3          3          3
+     monday |          0          1          2          3          3          3          3          3          3
+LCS length : 3
+LCS words  : new tax rules
+Precision  : 0.375   (3/8)
+Recall     : 0.375   (3/8)
+F1         : 0.375
+
+--- Pair 10 ---
+Reference : company profits rose sharply in the third quarter
+Candidate : profits rose in the quarter
+DP table  :
+                   profits    rose      in     the quarter
+         |       0       0       0       0       0       0
+ company |       0       0       0       0       0       0
+ profits |       0       1       1       1       1       1
+    rose |       0       1       2       2       2       2
+ sharply |       0       1       2       2       2       2
+      in |       0       1       2       3       3       3
+     the |       0       1       2       3       4       4
+   third |       0       1       2       3       4       4
+ quarter |       0       1       2       3       4       5
+LCS length : 5
+LCS words  : profits rose in the quarter
+Precision  : 1.000   (5/5)
+Recall     : 0.625   (5/8)
+F1         : 0.769
+
+Best pair  : 5  (F1 = 1.000)
+
+============================================================
+SELF-LEARNING CHECKS
+============================================================
+300 random tests: DP table == two-row == brute force; Hirschberg LCS valid & optimal.  OK
+2000 x 1500 sequences -> DP: 1111 | two-row: 1111 | Hirschberg length: 1111
